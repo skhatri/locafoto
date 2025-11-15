@@ -38,7 +38,7 @@ actor LFSImportService {
         }
 
         // Generate thumbnail
-        let thumbnailData = try generateThumbnail(from: decryptedData)
+        let thumbnailData = try ThumbnailGenerator.generate(from: decryptedData)
 
         // Now re-encrypt with our own encryption system for storage
         let encryptionService = EncryptionService()
@@ -131,27 +131,4 @@ actor LFSImportService {
         return fileURL
     }
 
-    /// Generate thumbnail from photo data
-    private func generateThumbnail(from data: Data, size: CGFloat = 200) throws -> Data {
-        guard let image = UIImage(data: data) else {
-            throw LFSError.invalidFormat
-        }
-
-        let scale = size / max(image.size.width, image.size.height)
-        let newSize = CGSize(
-            width: image.size.width * scale,
-            height: image.size.height * scale
-        )
-
-        UIGraphicsBeginImageContextWithOptions(newSize, true, 1.0)
-        image.draw(in: CGRect(origin: .zero, size: newSize))
-        let thumbnail = UIGraphicsGetImageFromCurrentImageContext()
-        UIGraphicsEndImageContext()
-
-        guard let thumbnailData = thumbnail?.jpegData(compressionQuality: 0.8) else {
-            throw LFSError.invalidFormat
-        }
-
-        return thumbnailData
-    }
 }

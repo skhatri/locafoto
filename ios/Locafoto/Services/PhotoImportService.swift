@@ -12,8 +12,8 @@ actor PhotoImportService {
         // Load the image data
         let photoData = try await loadPhotoData(from: result)
 
-        // Generate thumbnail
-        let thumbnailData = try generateThumbnail(from: photoData)
+        // Generate thumbnail using utility
+        let thumbnailData = try ThumbnailGenerator.generate(from: photoData)
 
         // Encrypt both full image and thumbnail
         let encryptedPhoto = try await encryptionService.encryptPhoto(photoData)
@@ -47,29 +47,6 @@ actor PhotoImportService {
         }
     }
 
-    /// Generate thumbnail from photo data
-    private func generateThumbnail(from data: Data, size: CGFloat = 200) throws -> Data {
-        guard let image = UIImage(data: data) else {
-            throw ImportError.invalidImageData
-        }
-
-        let scale = size / max(image.size.width, image.size.height)
-        let newSize = CGSize(
-            width: image.size.width * scale,
-            height: image.size.height * scale
-        )
-
-        UIGraphicsBeginImageContextWithOptions(newSize, true, 1.0)
-        image.draw(in: CGRect(origin: .zero, size: newSize))
-        let thumbnail = UIGraphicsGetImageFromCurrentImageContext()
-        UIGraphicsEndImageContext()
-
-        guard let thumbnailData = thumbnail?.jpegData(compressionQuality: 0.8) else {
-            throw ImportError.thumbnailGenerationFailed
-        }
-
-        return thumbnailData
-    }
 }
 
 // MARK: - Errors
@@ -77,7 +54,6 @@ actor PhotoImportService {
 enum ImportError: LocalizedError {
     case noImageData
     case invalidImageData
-    case thumbnailGenerationFailed
 
     var errorDescription: String? {
         switch self {
@@ -85,8 +61,6 @@ enum ImportError: LocalizedError {
             return "No image data available"
         case .invalidImageData:
             return "Invalid image data"
-        case .thumbnailGenerationFailed:
-            return "Failed to generate thumbnail"
         }
     }
 }

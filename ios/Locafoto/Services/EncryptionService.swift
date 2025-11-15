@@ -106,6 +106,36 @@ actor EncryptionService {
         )
     }
 
+    /// Encrypt data using an existing encrypted key (e.g., for thumbnails)
+    /// This allows encrypting multiple pieces of data with the same key
+    func encryptPhotoData(
+        _ data: Data,
+        encryptedKey: Data,
+        iv: Data,
+        authTag: Data
+    ) async throws -> Data {
+        guard let masterKey = try await getMasterKey() else {
+            throw EncryptionError.masterKeyNotFound
+        }
+
+        // Decrypt the photo key from the encrypted key data
+        let photoKey = try decryptKey(encryptedKey, with: masterKey)
+
+        // Generate a new nonce for this encryption
+        let nonce = try AES.GCM.Nonce()
+
+        // Encrypt the data with the photo key
+        let sealedBox = try AES.GCM.seal(data, using: photoKey, nonce: nonce)
+
+        // Combine nonce + ciphertext + tag for storage
+        var combined = Data()
+        combined.append(contentsOf: nonce)
+        combined.append(sealedBox.ciphertext)
+        combined.append(sealedBox.tag)
+
+        return combined
+    }
+
     /// Decrypt photo data
     func decryptPhotoData(
         _ encryptedData: Data,

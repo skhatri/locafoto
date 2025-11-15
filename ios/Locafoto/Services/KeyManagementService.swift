@@ -14,6 +14,9 @@ actor KeyManagementService {
     /// Initialize master key from PIN
     /// This should be called when user sets up PIN for first time
     func initializeMasterKey(pin: String) async throws {
+        // Validate PIN
+        try validatePin(pin)
+
         // Generate a random salt for PIN derivation
         var salt = Data(count: 32)
         _ = salt.withUnsafeMutableBytes { saltBytes in
@@ -67,6 +70,9 @@ actor KeyManagementService {
 
     /// Verify PIN by attempting to derive key and decrypt a test key
     func verifyPin(_ pin: String) async throws -> Bool {
+        // Validate PIN
+        try validatePin(pin)
+
         let salt = try getPinSalt()
         let masterKey = try deriveMasterKey(from: pin, salt: salt)
 
@@ -88,6 +94,9 @@ actor KeyManagementService {
 
     /// Get master key from PIN
     func getMasterKey(pin: String) async throws -> SymmetricKey {
+        // Validate PIN
+        try validatePin(pin)
+
         let salt = try getPinSalt()
         return try deriveMasterKey(from: pin, salt: salt)
     }
@@ -96,6 +105,10 @@ actor KeyManagementService {
 
     /// Create a new encryption key
     func createKey(name: String, pin: String) async throws -> KeyFile {
+        // Validate inputs
+        try validatePin(pin)
+        try await validateKeyName(name)
+
         let masterKey = try await getMasterKey(pin: pin)
 
         // Generate new random key
@@ -122,6 +135,11 @@ actor KeyManagementService {
 
     /// Import a key that was shared externally
     func importKey(name: String, keyData: Data, pin: String) async throws -> KeyFile {
+        // Validate inputs
+        try validatePin(pin)
+        try await validateKeyName(name)
+        try validateKeyData(keyData)
+
         let masterKey = try await getMasterKey(pin: pin)
 
         // Create symmetric key from data
@@ -199,6 +217,59 @@ actor KeyManagementService {
         let keyFileURL = keysDir.appendingPathComponent("\(id.uuidString).key")
 
         try fileManager.removeItem(at: keyFileURL)
+    }
+
+    // MARK: - Validation
+
+    /// Validate PIN meets security requirements
+    private func validatePin(_ pin: String) throws {
+        guard !pin.isEmpty else {
+            throw KeyManagementError.invalidPin
+        }
+
+        guard pin.count >= 4 else {
+            throw KeyManagementError.pinTooShort
+        }
+
+        guard pin.count <= 32 else {
+            throw KeyManagementError.pinTooLong
+        }
+    }
+
+    /// Validate key name meets requirements
+    private func validateKeyName(_ name: String) async throws {
+        guard !name.isEmpty else {
+            throw KeyManagementError.invalidKeyName
+        }
+
+        guard name.count <= 64 else {
+            throw KeyManagementError.keyNameTooLong
+        }
+
+        // Check for path traversal and invalid filename characters
+        let invalidCharacters = CharacterSet(charactersIn: "/\\")
+        if name.rangeOfCharacter(from: invalidCharacters) != nil || name.contains("..") {
+            throw KeyManagementError.keyNameContainsInvalidCharacters
+        }
+
+        // Check for control characters
+        let controlCharacters = CharacterSet.controlCharacters
+        if name.rangeOfCharacter(from: controlCharacters) != nil {
+            throw KeyManagementError.keyNameContainsInvalidCharacters
+        }
+
+        // Check for duplicate names
+        let existingKeys = try await loadAllKeys()
+        if existingKeys.contains(where: { $0.name == name }) {
+            throw KeyManagementError.duplicateKeyName
+        }
+    }
+
+    /// Validate key data is correct size for AES-256
+    private func validateKeyData(_ keyData: Data) throws {
+        guard keyData.count == 32 else {
+            throw KeyManagementError.invalidKeyData
+        }
     }
 
     // MARK: - Private Helpers
@@ -335,16 +406,27 @@ import CommonCrypto
 
 enum KeyManagementError: LocalizedError {
     case invalidPin
+    case pinTooShort
+    case pinTooLong
     case keyDerivationFailed
     case keyNotFound
     case invalidEncryptedKey
     case keychainWriteFailed
     case pinNotSet
+    case invalidKeyName
+    case keyNameTooLong
+    case keyNameContainsInvalidCharacters
+    case duplicateKeyName
+    case invalidKeyData
 
     var errorDescription: String? {
         switch self {
         case .invalidPin:
             return "Invalid PIN"
+        case .pinTooShort:
+            return "PIN must be at least 4 characters"
+        case .pinTooLong:
+            return "PIN must be no more than 32 characters"
         case .keyDerivationFailed:
             return "Failed to derive key from PIN"
         case .keyNotFound:
@@ -355,6 +437,16 @@ enum KeyManagementError: LocalizedError {
             return "Failed to save PIN salt to Keychain"
         case .pinNotSet:
             return "PIN has not been set up"
+        case .invalidKeyName:
+            return "Key name cannot be empty"
+        case .keyNameTooLong:
+            return "Key name must be no more than 64 characters"
+        case .keyNameContainsInvalidCharacters:
+            return "Key name contains invalid characters (/, \\, .., or control characters)"
+        case .duplicateKeyName:
+            return "A key with this name already exists"
+        case .invalidKeyData:
+            return "Key data must be exactly 32 bytes (256 bits)"
         }
     }
 }
