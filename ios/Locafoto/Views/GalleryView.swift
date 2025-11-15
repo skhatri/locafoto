@@ -122,7 +122,9 @@ struct PhotoDetailView: View {
     @State private var fullImage: UIImage?
     @State private var isLoading = true
     @State private var showShareSheet = false
+    @State private var showShareOptions = false
     @State private var shareURL: URL?
+    @EnvironmentObject var appState: AppState
 
     var body: some View {
         ZStack {
@@ -140,7 +142,7 @@ struct PhotoDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button(action: sharePhoto) {
+                Button(action: { showShareOptions = true }) {
                     Image(systemName: "square.and.arrow.up")
                         .foregroundColor(.white)
                 }
@@ -150,6 +152,9 @@ struct PhotoDetailView: View {
             if let url = shareURL {
                 ShareSheet(items: [url])
             }
+        }
+        .sheet(isPresented: $showShareOptions) {
+            ShareOptionsView(photo: photo) { shareURL = $0; showShareSheet = true }
         }
         .onAppear {
             loadFullImage()
@@ -184,19 +189,136 @@ struct PhotoDetailView: View {
         }
     }
 
-    private func sharePhoto() {
-        Task {
-            do {
-                let sharingService = SharingService()
-                let url = try await sharingService.createShareBundle(for: photo)
 
-                await MainActor.run {
-                    shareURL = url
-                    showShareSheet = true
+struct ShareOptionsView: View {
+    let photo: Photo
+    let onShare: (URL) -> Void
+
+    @Environment(\.dismiss) var dismiss
+    @EnvironmentObject var appState: AppState
+    @State private var keys: [KeyFile] = []
+    @State private var isLoading = false
+
+    var body: some View {
+        NavigationView {
+            List {
+                Section(header: Text("Share Format")) {
+                    Button(action: {
+                        Task {
+                            await shareAsLocaphoto()
+                        }
+                    }) {
+                        HStack {
+                            Image(systemName: "lock.doc.fill")
+                                .foregroundColor(.blue)
+                            VStack(alignment: .leading) {
+                                Text(".locaphoto")
+                                    .font(.headline)
+                                Text("Standard encrypted photo format")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    }
                 }
-            } catch {
-                print("Failed to create share bundle: \(error)")
+
+                Section(header: Text("Share as .lfs (Locafoto Shared)")) {
+                    if keys.isEmpty {
+                        Text("No encryption keys available. Create one in the Keys tab.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    } else {
+                        ForEach(keys) { key in
+                            Button(action: {
+                                Task {
+                                    await shareAsLFS(keyName: key.name)
+                                }
+                            }) {
+                                HStack {
+                                    Image(systemName: "key.fill")
+                                        .foregroundColor(.green)
+                                    VStack(alignment: .leading) {
+                                        Text(key.name)
+                                            .font(.headline)
+                                        Text("Encrypt with this key")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
+            .navigationTitle("Share Options")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+            }
+            .onAppear {
+                Task {
+                    await loadKeys()
+                }
+            }
+            .overlay {
+                if isLoading {
+                    ProgressView()
+                }
+            }
+        }
+    }
+
+    private func loadKeys() async {
+        let keyManagementService = KeyManagementService()
+        do {
+            keys = try await keyManagementService.loadAllKeys()
+        } catch {
+            print("Failed to load keys: \(error)")
+        }
+    }
+
+    private func shareAsLocaphoto() async {
+        isLoading = true
+
+        do {
+            let sharingService = SharingService()
+            let url = try await sharingService.createShareBundle(for: photo)
+
+            await MainActor.run {
+                onShare(url)
+                dismiss()
+                isLoading = false
+            }
+        } catch {
+            print("Failed to create .locaphoto: \(error)")
+            isLoading = false
+        }
+    }
+
+    private func shareAsLFS(keyName: String) async {
+        guard let pin = appState.currentPin else {
+            print("No PIN available")
+            return
+        }
+
+        isLoading = true
+
+        do {
+            let lfsService = LFSImportService()
+            let url = try await lfsService.createLFSFile(for: photo, keyName: keyName, pin: pin)
+
+            await MainActor.run {
+                onShare(url)
+                dismiss()
+                isLoading = false
+            }
+        } catch {
+            print("Failed to create .lfs file: \(error)")
+            isLoading = false
         }
     }
 }

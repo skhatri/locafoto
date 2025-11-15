@@ -30,7 +30,7 @@
     <key>NSPhotoLibraryAddUsageDescription</key>
     <string>Locafoto can optionally export photos back to your library.</string>
 
-    <!-- Custom UTI for .locaphoto files -->
+    <!-- Custom UTI for .locaphoto and .lfs files -->
     <key>UTExportedTypeDeclarations</key>
     <array>
         <dict>
@@ -55,9 +55,31 @@
                 </array>
             </dict>
         </dict>
+        <dict>
+            <key>UTTypeIdentifier</key>
+            <string>com.locafoto.lfs</string>
+            <key>UTTypeDescription</key>
+            <string>Locafoto Shared File</string>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.data</string>
+                <string>public.content</string>
+            </array>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <array>
+                    <string>lfs</string>
+                </array>
+                <key>public.mime-type</key>
+                <array>
+                    <string>application/x-locafoto-lfs</string>
+                </array>
+            </dict>
+        </dict>
     </array>
 
-    <!-- Document Types - Handle incoming .locaphoto files -->
+    <!-- Document Types - Handle incoming .locaphoto and .lfs files -->
     <key>CFBundleDocumentTypes</key>
     <array>
         <dict>
@@ -68,6 +90,16 @@
             <key>LSItemContentTypes</key>
             <array>
                 <string>com.locafoto.encrypted-photo</string>
+            </array>
+        </dict>
+        <dict>
+            <key>CFBundleTypeName</key>
+            <string>Locafoto Shared File</string>
+            <key>LSHandlerRank</key>
+            <string>Owner</string>
+            <key>LSItemContentTypes</key>
+            <array>
+                <string>com.locafoto.lfs</string>
             </array>
         </dict>
     </array>

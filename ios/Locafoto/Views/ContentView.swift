@@ -27,12 +27,19 @@ struct ContentView: View {
                 }
                 .tag(2)
 
+            // Key Library View (NEW)
+            KeyLibraryView()
+                .tabItem {
+                    Label("Keys", systemImage: "key.fill")
+                }
+                .tag(3)
+
             // Settings View
             SettingsView()
                 .tabItem {
                     Label("Settings", systemImage: "gear")
                 }
-                .tag(3)
+                .tag(4)
         }
     }
 }
