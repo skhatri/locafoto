@@ -24,25 +24,40 @@
 
 ### What is Locafoto?
 
-Locafoto is a [photo management/organization system - to be defined]. This project aims to [purpose to be defined based on initial development].
+Locafoto is a privacy-focused iOS photo management application that enables users to capture, store, and share photos with complete privacy. Photos can be captured directly without saving to the Camera Roll, stored with local encryption, and shared securely via AirDrop between Locafoto users.
 
 ### Tech Stack
 
-**Status:** To be determined during initial development
+**Platform:** iOS 15.0+
+**Language:** Swift 5.9+
+**UI Framework:** SwiftUI
+**Concurrency:** Swift Async/Await + Actors
 
-Expected components may include:
-- **Frontend:** [TBD - React, Vue, Svelte, etc.]
-- **Backend:** [TBD - Node.js, Python, Go, etc.]
-- **Database:** [TBD - PostgreSQL, MySQL, SQLite, etc.]
-- **Storage:** [TBD - Local filesystem, S3, etc.]
-- **Build Tools:** [TBD]
+**Key Frameworks:**
+- **AVFoundation:** Camera capture without Camera Roll
+- **CryptoKit:** AES-256-GCM encryption/decryption
+- **PhotoKit:** Camera Roll import (PHPicker)
+- **CoreData:** Photo metadata storage (planned)
+- **UniformTypeIdentifiers:** Custom .locaphoto file type
+- **UIKit:** Integration points (UIActivityViewController, etc.)
 
-### Key Features (Planned)
+**Storage:**
+- **Encrypted Photos:** App container file system
+- **Metadata:** In-memory (to be replaced with CoreData)
+- **Encryption Keys:** iOS Keychain (device-specific, never backed up)
 
-- Photo upload and storage
-- Photo organization and tagging
-- Photo viewing and browsing
-- [Additional features to be defined]
+**Build Tools:**
+- Xcode 15.0+
+- Swift Package Manager (for future dependencies)
+
+### Key Features (Implemented)
+
+- **Direct Camera Capture:** Capture photos without saving to Camera Roll
+- **Camera Roll Import:** Import existing photos with batch support
+- **Local Encryption:** AES-256-GCM encryption for all photos
+- **Secure Gallery:** View encrypted photos with thumbnail optimization
+- **AirDrop Sharing:** Share encrypted photos (.locaphoto format)
+- **Privacy Controls:** User control over metadata preservation
 
 ---
 
@@ -53,36 +68,35 @@ Expected components may include:
 ```
 locafoto/
 ├── .git/              # Git repository data
-└── CLAUDE.md          # This file
-```
-
-### Planned Structure
-
-As the project develops, the structure should follow these guidelines:
-
-```
-locafoto/
-├── .github/           # GitHub workflows and templates
-│   ├── workflows/     # CI/CD pipelines
-│   └── ISSUE_TEMPLATE/
 ├── docs/              # Documentation
-├── src/               # Source code
-│   ├── components/    # Reusable components
-│   ├── services/      # Business logic
-│   ├── utils/         # Utility functions
-│   └── types/         # Type definitions
-├── tests/             # Test files
-│   ├── unit/
-│   ├── integration/
-│   └── e2e/
-├── scripts/           # Build and deployment scripts
-├── config/            # Configuration files
-├── public/            # Static assets
-├── .gitignore
-├── README.md
+│   └── TECHNICAL_SPEC.md  # Technical specification
+├── ios/               # iOS application
+│   ├── Locafoto/      # Main app code
+│   │   ├── App/       # App entry point
+│   │   ├── Views/     # SwiftUI views
+│   │   ├── ViewModels/# MVVM view models
+│   │   ├── Services/  # Business logic services
+│   │   ├── Models/    # Data models
+│   │   └── Resources/ # Assets, Info.plist
+│   └── README.md      # iOS-specific documentation
 ├── CLAUDE.md          # This file
-└── [package.json/requirements.txt/go.mod/etc.]
+└── README.md          # Main project README
 ```
+
+### Structure Guidelines
+
+**iOS App Structure (MVVM):**
+- **App/:** Application lifecycle and configuration
+- **Views/:** SwiftUI view components
+- **ViewModels/:** View state and business logic coordination
+- **Services/:** Core functionality (camera, encryption, storage, sharing)
+- **Models/:** Data structures and entities
+- **Resources/:** Info.plist, assets, configuration files
+
+**Documentation:**
+- **docs/:** Technical specifications and architecture docs
+- **ios/README.md:** iOS-specific build and development instructions
+- **README.md:** Project overview and quick start
 
 **Key Principles:**
 - Keep source code separate from tests
@@ -146,31 +160,34 @@ When setting up the project for the first time:
 4. **Consistent naming** - Use established patterns throughout
 5. **Comments for why, not what** - Code should be self-documenting
 
-### Naming Conventions
+### Naming Conventions (Swift/iOS)
 
-**To be established based on chosen tech stack:**
-
-- **Files:** kebab-case, PascalCase, or snake_case
-- **Variables:** camelCase or snake_case
-- **Constants:** UPPER_SNAKE_CASE
-- **Classes:** PascalCase
-- **Functions:** camelCase or snake_case
-- **Components:** PascalCase
+- **Files:** PascalCase (e.g., `CameraService.swift`, `PhotoViewModel.swift`)
+- **Variables:** camelCase (e.g., `captureSession`, `isCapturing`)
+- **Constants:** camelCase for local, UPPER_SNAKE_CASE for global (e.g., `maxFileSize`, `DEFAULT_TIMEOUT`)
+- **Classes/Structs:** PascalCase (e.g., `CameraService`, `EncryptedPhoto`)
+- **Protocols:** PascalCase with descriptive suffix (e.g., `PhotoStorageProtocol`)
+- **Functions:** camelCase (e.g., `capturePhoto()`, `encryptData()`)
+- **Enums:** PascalCase with lowercase cases (e.g., `CameraError.notAvailable`)
+- **Actors:** PascalCase (e.g., `actor StorageService`)
 
 ### File Organization
 
-- **One component/class per file** (unless tightly coupled)
-- **Group related files** in directories
-- **Export from index files** for clean imports
+- **One type per file** (class, struct, enum, actor)
+- **Related extensions** can be in same file
+- **Group by feature** (Services/, Views/, ViewModels/)
 - **Keep files under 300 lines** when possible
+- **Use MARK:** comments for organization
 
-### Code Style
+### Code Style (Swift)
 
-- **Indentation:** [2 spaces / 4 spaces / tabs - TBD]
-- **Line length:** Max 100-120 characters
-- **Semicolons:** [Required / Optional - TBD]
-- **Quotes:** [Single / Double - TBD]
-- **Trailing commas:** Recommended for multi-line structures
+- **Indentation:** 4 spaces (Xcode default)
+- **Line length:** Max 120 characters
+- **Semicolons:** Not used in Swift
+- **Quotes:** Double quotes for strings
+- **Trailing commas:** Not typically used in Swift
+- **Access control:** Explicit (private, internal, public)
+- **Type inference:** Prefer implicit where clear
 
 ---
 
