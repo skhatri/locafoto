@@ -27,19 +27,26 @@ struct ContentView: View {
                 }
                 .tag(2)
 
-            // Key Library View (NEW)
+            // Key Library View
             KeyLibraryView()
                 .tabItem {
                     Label("Keys", systemImage: "key.fill")
                 }
                 .tag(3)
 
+            // LFS Library View (NEW)
+            LFSLibraryView()
+                .tabItem {
+                    Label("LFS Files", systemImage: "doc.badge.ellipsis")
+                }
+                .tag(4)
+
             // Settings View
             SettingsView()
                 .tabItem {
                     Label("Settings", systemImage: "gear")
                 }
-                .tag(4)
+                .tag(5)
         }
     }
 }

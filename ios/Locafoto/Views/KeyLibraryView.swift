@@ -4,6 +4,8 @@ struct KeyLibraryView: View {
     @StateObject private var viewModel = KeyLibraryViewModel()
     @State private var showCreateKey = false
     @State private var showImportKey = false
+    @State private var showDeleteConfirmation = false
+    @State private var keyToDelete: KeyFile?
     @EnvironmentObject var appState: AppState
 
     var body: some View {
@@ -13,17 +15,46 @@ struct KeyLibraryView: View {
                     EmptyKeyLibraryView(onCreateKey: { showCreateKey = true })
                 } else {
                     List {
-                        ForEach(viewModel.keys) { key in
-                            KeyRow(key: key)
-                                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                    Button(role: .destructive) {
-                                        Task {
-                                            await viewModel.deleteKey(key.id)
+                        Section(header: HStack {
+                            Text("Statistics")
+                            Spacer()
+                        }) {
+                            HStack {
+                                Image(systemName: "key.fill")
+                                    .foregroundColor(.blue)
+                                    .frame(width: 30)
+                                Text("Total Keys")
+                                Spacer()
+                                Text("\(viewModel.keys.count)")
+                                    .font(.headline)
+                            }
+
+                            HStack {
+                                Image(systemName: "doc.fill")
+                                    .foregroundColor(.green)
+                                    .frame(width: 30)
+                                Text("Files Encrypted")
+                                Spacer()
+                                Text("\(viewModel.totalFilesEncrypted)")
+                                    .font(.headline)
+                            }
+                        }
+
+                        Section(header: Text("Encryption Keys")) {
+                            ForEach(viewModel.keys) { key in
+                                KeyRow(key: key, fileCount: viewModel.fileCount(for: key.name))
+                                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                        Button(role: .destructive) {
+                                            keyToDelete = key
+                                            Task {
+                                                await viewModel.checkCanDelete(key)
+                                                showDeleteConfirmation = true
+                                            }
+                                        } label: {
+                                            Label("Delete", systemImage: "trash")
                                         }
-                                    } label: {
-                                        Label("Delete", systemImage: "trash")
                                     }
-                                }
+                            }
                         }
                     }
                 }
@@ -59,6 +90,25 @@ struct KeyLibraryView: View {
             .onAppear {
                 Task {
                     await viewModel.loadKeys()
+                }
+            }
+            .alert("Delete Key", isPresented: $showDeleteConfirmation, presenting: keyToDelete) { key in
+                if viewModel.canDeleteKey(key) {
+                    Button("Cancel", role: .cancel) { }
+                    Button("Delete", role: .destructive) {
+                        Task {
+                            await viewModel.deleteKey(key.id)
+                        }
+                    }
+                } else {
+                    Button("OK", role: .cancel) { }
+                }
+            } message: { key in
+                if viewModel.canDeleteKey(key) {
+                    Text("This will permanently delete the encryption key '\(key.name)'. This action cannot be undone.")
+                } else {
+                    let count = viewModel.fileCount(for: key.name)
+                    Text("Cannot delete this key. It is currently being used by \(count) file\(count == 1 ? "" : "s"). Delete the files first from the LFS Library.")
                 }
             }
         }
@@ -99,6 +149,7 @@ struct EmptyKeyLibraryView: View {
 
 struct KeyRow: View {
     let key: KeyFile
+    let fileCount: Int
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -111,13 +162,20 @@ struct KeyRow: View {
 
                 Spacer()
 
-                if key.usageCount > 0 {
-                    Text("\(key.usageCount)")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    Image(systemName: "doc.fill")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                if fileCount > 0 {
+                    HStack(spacing: 4) {
+                        Text("\(fileCount)")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.green)
+                        Image(systemName: "doc.fill")
+                            .font(.caption)
+                            .foregroundColor(.green)
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.green.opacity(0.1))
+                    .cornerRadius(8)
                 }
             }
 
@@ -132,6 +190,17 @@ struct KeyRow: View {
                     Text("Last used: \(lastUsed.formatted(date: .abbreviated, time: .omitted))")
                         .font(.caption)
                         .foregroundColor(.secondary)
+                }
+            }
+
+            if fileCount > 0 {
+                HStack {
+                    Image(systemName: "lock.shield.fill")
+                        .font(.caption2)
+                        .foregroundColor(.orange)
+                    Text("Protected - \(fileCount) file\(fileCount == 1 ? "" : "s") using this key")
+                        .font(.caption2)
+                        .foregroundColor(.orange)
                 }
             }
         }

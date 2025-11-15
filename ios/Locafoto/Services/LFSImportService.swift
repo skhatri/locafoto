@@ -6,11 +6,13 @@ import UIKit
 actor LFSImportService {
     private let keyManagementService = KeyManagementService()
     private let storageService = StorageService()
+    private let trackingService = LFSFileTrackingService()
 
     /// Handle incoming .lfs file from AirDrop
     func handleIncomingLFSFile(from url: URL, pin: String) async throws -> Photo {
         // Read the LFS file
         let fileData = try Data(contentsOf: url)
+        let originalFilename = url.lastPathComponent
 
         // Parse LFS structure
         let lfsFile = try LFSFile.parse(from: fileData)
@@ -70,6 +72,14 @@ actor LFSImportService {
             tags: ["lfs", "imported"],
             isFavorite: false,
             isHidden: false
+        )
+
+        // Track this import for key usage statistics
+        try await trackingService.trackImport(
+            photoId: photo.id,
+            keyName: lfsFile.keyName,
+            originalFilename: originalFilename,
+            fileSize: Int64(fileData.count)
         )
 
         // Clean up temp file
