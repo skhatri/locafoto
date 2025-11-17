@@ -8,29 +8,54 @@ struct CameraView: View {
         NavigationView {
             ZStack {
                 // Camera Preview
-                CameraPreviewView(session: viewModel.captureSession)
-                    .ignoresSafeArea()
+                if viewModel.isCameraReady {
+                    CameraPreviewView(session: viewModel.captureSession)
+                        .ignoresSafeArea()
 
-                VStack {
-                    Spacer()
+                    VStack {
+                        Spacer()
 
-                    // Capture Button
-                    Button(action: {
-                        Task {
-                            await viewModel.capturePhoto()
+                        // Capture Button
+                        Button(action: {
+                            Task {
+                                await viewModel.capturePhoto()
+                            }
+                        }) {
+                            Circle()
+                                .fill(Color.white)
+                                .frame(width: 70, height: 70)
+                                .overlay(
+                                    Circle()
+                                        .stroke(Color.white, lineWidth: 3)
+                                        .frame(width: 80, height: 80)
+                                )
                         }
-                    }) {
-                        Circle()
-                            .fill(Color.white)
-                            .frame(width: 70, height: 70)
-                            .overlay(
-                                Circle()
-                                    .stroke(Color.white, lineWidth: 3)
-                                    .frame(width: 80, height: 80)
-                            )
+                        .padding(.bottom, 40)
+                        .disabled(viewModel.isCapturing)
                     }
-                    .padding(.bottom, 40)
-                    .disabled(viewModel.isCapturing)
+                } else {
+                    // Camera not ready - show message
+                    VStack(spacing: 20) {
+                        Image(systemName: "camera.fill")
+                            .font(.system(size: 60))
+                            .foregroundColor(.gray)
+                        Text("Camera Unavailable")
+                            .font(.headline)
+                        Text(viewModel.cameraStatusMessage)
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal)
+
+                        if viewModel.needsPermission {
+                            Button("Open Settings") {
+                                if let url = URL(string: UIApplication.openSettingsURLString) {
+                                    UIApplication.shared.open(url)
+                                }
+                            }
+                            .buttonStyle(.bordered)
+                        }
+                    }
                 }
 
                 // Status overlay
