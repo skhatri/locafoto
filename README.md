@@ -75,32 +75,45 @@ See [ios/README.md](ios/README.md) for detailed build instructions.
 
 ### PIN-Based Master Key
 
-```
-User enters PIN
-       ↓
-PBKDF2 with salt (100,000 iterations)
-       ↓
-Derive 256-bit master key
-       ↓
-Master key encrypts all encryption keys
-       ↓
-Keys stored encrypted at rest
+```mermaid
+flowchart TD
+    A[User Enters PIN] --> B[PBKDF2 Key Derivation]
+    B --> |100,000 iterations + salt| C[256-bit Master Key]
+    C --> D[Encrypt All Encryption Keys]
+    D --> E[Store Encrypted Keys at Rest]
+
+    style A fill:#e1f5ff
+    style C fill:#fff4e1
+    style E fill:#e8f5e9
+
+    note1[PIN never stored]
+    note2[Salt is device-specific]
+    note3[Master key in memory only]
 ```
 
 **Security:** Your PIN never leaves the device. The master key is derived fresh each time using PBKDF2 with 100,000 iterations, making brute-force attacks computationally expensive.
 
 ### Camera Capture (No Camera Roll!)
 
-```
-User presses capture
-       ↓
-AVFoundation captures to memory
-       ↓
-Photo data never saved to Camera Roll
-       ↓
-Immediately encrypted with AES-256-GCM
-       ↓
-Stored in app's private container
+```mermaid
+sequenceDiagram
+    participant User
+    participant Camera as Camera View
+    participant AV as AVFoundation
+    participant Enc as Encryption Service
+    participant Storage as App Storage
+
+    User->>Camera: Press Capture
+    Camera->>AV: capturePhoto()
+    AV->>AV: Capture to Memory Buffer
+    Note over AV: Never touches Camera Roll!
+    AV-->>Enc: Photo Data (in memory)
+    Enc->>Enc: Generate Random Key
+    Enc->>Enc: Encrypt with AES-256-GCM
+    Enc-->>Storage: Save Encrypted Photo
+    Storage-->>User: Photo Saved Securely
+
+    Note over Storage: Stored in app's<br/>private container
 ```
 
 **Your photos never touch the system Camera Roll!**
@@ -114,7 +127,63 @@ Stored in app's private container
 - **Key Encryption:** All keys encrypted with master key at rest
 - **Integrity:** Authentication tags prevent tampering
 
+```mermaid
+graph TB
+    subgraph "Key Hierarchy"
+        PIN[User PIN] -->|PBKDF2| MK[Master Key]
+        MK -->|Encrypts| PK1[Photo Key 1]
+        MK -->|Encrypts| PK2[Photo Key 2]
+        MK -->|Encrypts| SK[Shared Keys .lfs]
+    end
+
+    subgraph "Photo Encryption"
+        Photo[Photo Data] --> |AES-256-GCM| EP[Encrypted Photo]
+        PK1 --> |Encrypts| Photo
+        IV[Random IV/Nonce] --> EP
+        Tag[Auth Tag] --> EP
+    end
+
+    subgraph "Storage"
+        MK -.Stored in.-> KC[iOS Keychain]
+        PK1 -.Encrypted at rest.-> AS[App Storage]
+        PK2 -.Encrypted at rest.-> AS
+        SK -.Encrypted at rest.-> AS
+        EP --> FS[File System]
+    end
+
+    style PIN fill:#e1f5ff
+    style MK fill:#fff4e1
+    style EP fill:#ffe1f5
+    style KC fill:#e8f5e9
+    style FS fill:#e8f5e9
+```
+
 ## File Formats
+
+```mermaid
+graph LR
+    subgraph ".locaphoto Format - Self-contained"
+        LP[.locaphoto File]
+        LP --> LPJ[JSON Bundle]
+        LPJ --> LPID[Photo ID]
+        LPJ --> LPED[Encrypted Photo Data]
+        LPJ --> LPEK[Encrypted Key]
+        LPJ --> LPIV[IV/Nonce]
+        LPJ --> LPTAG[Auth Tag]
+        LPJ --> LPMETA[Metadata]
+    end
+
+    subgraph ".lfs Format - Shared Key"
+        LFS[.lfs File]
+        LFS --> LFSH[Header 128 bytes<br/>Key Name]
+        LFS --> LFSE[Encrypted Data<br/>AES-256-GCM]
+        LFS --> LFSIV[IV/Nonce 12 bytes]
+        LFS --> LFSTAG[Auth Tag 16 bytes]
+    end
+
+    style LP fill:#e1f5ff
+    style LFS fill:#fff4e1
+```
 
 ### .locaphoto Format (Standard)
 
@@ -241,6 +310,39 @@ You can encrypt files on your computer using standard AES-256-GCM and share them
    - AirDrop .lfs file
    - Automatic decryption using their copy of the key
 
+### AirDrop Sharing Workflow
+
+```mermaid
+sequenceDiagram
+    participant S as Sender
+    participant SA as Sender's App
+    participant AD as AirDrop
+    participant RA as Receiver's App
+    participant R as Receiver
+
+    Note over S,R: Sharing .locaphoto (Self-contained)
+    S->>SA: Select Photo & Share
+    SA->>SA: Create JSON Bundle<br/>(photo + encrypted key)
+    SA->>AD: Send .locaphoto file
+    AD->>RA: Transfer file
+    RA->>RA: Parse bundle
+    RA->>RA: Decrypt key with Master Key
+    RA->>RA: Decrypt photo
+    RA-->>R: Photo appears in gallery
+
+    Note over S,R: Sharing .lfs (Shared Key)
+    S->>SA: Create/Export shared key
+    S->>R: Share key securely<br/>(out-of-band)
+    R->>RA: Import key
+    S->>SA: Export photo as .lfs
+    SA->>SA: Encrypt with named key
+    SA->>AD: Send .lfs file
+    AD->>RA: Transfer file
+    RA->>RA: Find key by name
+    RA->>RA: Decrypt photo
+    RA-->>R: Photo appears in gallery
+```
+
 ## Security
 
 ### What's Protected
@@ -282,6 +384,64 @@ You can encrypt files on your computer using standard AES-256-GCM and share them
 6. **External Tools** - Build your own encryption tools
 
 ## Architecture
+
+### System Architecture
+
+```mermaid
+graph TB
+    subgraph "User Interface Layer"
+        CV[Camera View]
+        GV[Gallery View]
+        KV[Keys View]
+        SV[Settings View]
+    end
+
+    subgraph "ViewModel Layer (MVVM)"
+        CVM[CameraViewModel]
+        GVM[GalleryViewModel]
+        KVM[KeysViewModel]
+    end
+
+    subgraph "Service Layer"
+        CS[Camera Service<br/>AVFoundation]
+        ES[Encryption Service<br/>CryptoKit]
+        SS[Storage Service<br/>FileManager]
+        KS[Key Service<br/>Keychain]
+        SHS[Sharing Service<br/>AirDrop]
+    end
+
+    subgraph "Data Layer"
+        KC[iOS Keychain<br/>Master Key]
+        FS[File System<br/>Encrypted Photos]
+        AS[App Storage<br/>Encrypted Keys]
+    end
+
+    CV --> CVM
+    GV --> GVM
+    KV --> KVM
+
+    CVM --> CS
+    CVM --> ES
+    GVM --> ES
+    GVM --> SS
+    KVM --> KS
+
+    CS --> ES
+    ES --> KS
+    ES --> SS
+    SHS --> ES
+    SHS --> SS
+
+    KS --> KC
+    SS --> FS
+    ES --> AS
+
+    style CV fill:#e1f5ff
+    style CS fill:#fff4e1
+    style ES fill:#ffe1f5
+    style KC fill:#e8f5e9
+    style FS fill:#e8f5e9
+```
 
 ### Tech Stack
 
