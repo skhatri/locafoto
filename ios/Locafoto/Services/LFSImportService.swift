@@ -110,7 +110,7 @@ actor LFSImportService {
         let lfsKey = try await keyManagementService.getKey(byName: keyName, pin: pin)
 
         // Encrypt with LFS key
-        let nonce = try AES.GCM.Nonce()
+        let nonce = AES.GCM.Nonce()
         let sealedBox = try AES.GCM.seal(decryptedData, using: lfsKey, nonce: nonce)
 
         // Create LFS file

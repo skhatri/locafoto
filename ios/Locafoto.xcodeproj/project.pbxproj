@@ -7,61 +7,67 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		B53D6A4519D607019D85A584 /* LocafotoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 559527197DD219F3D89DAA92 /* LocafotoApp.swift */; };
-		D303F800CF9B73A5E8D2125A /* LFSFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = D11001146AB62450585325B2 /* LFSFile.swift */; };
-		20D11F43EC75D1131B6DF211 /* Photo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BF9C394C8CBFAC9BF1B544E /* Photo.swift */; };
-		0F4666432364FCF5826ACF4D /* CameraService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6DFA1235A1EE674FB2D608B /* CameraService.swift */; };
-		3C56778F6AC8C359F4F2823E /* EncryptionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6249E4A6E8D2FCA965E52BE2 /* EncryptionService.swift */; };
-		8DC3E684AC931000B5CBB3E3 /* KeyManagementService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55D3A223DDE51A08C2B1B45F /* KeyManagementService.swift */; };
-		D9F63D2F235C973F1C9BE8A5 /* LFSFileTrackingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD9BD8362970246AA87AF3F7 /* LFSFileTrackingService.swift */; };
-		5FF444E4A1558147330590F0 /* LFSImportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAB25DC76A3584DAD8695E6C /* LFSImportService.swift */; };
-		D8F08234A4F83F6C25689701 /* PhotoImportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9ABC1545DEA6A8B699F0B524 /* PhotoImportService.swift */; };
 		0B28AAFDFC6AE865F68F3171 /* SharingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33C9B0AEE17C4BED043CEEAF /* SharingService.swift */; };
-		A649C8EFCB689AA992E36953 /* StorageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA06E6851E41EDF17B5F10C8 /* StorageService.swift */; };
+		0F4666432364FCF5826ACF4D /* CameraService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6DFA1235A1EE674FB2D608B /* CameraService.swift */; };
 		1C207A747CDC8A06AE9D6970 /* CameraViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6872FCB96BE94D959DA7E7F5 /* CameraViewModel.swift */; };
-		E7E7E217CF1365C5CBE57637 /* GalleryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 830424A9CC82BF7567F84EE2 /* GalleryViewModel.swift */; };
-		AB7FCD046A256CCB9FFA11C0 /* ImportViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 388BC8DE46198F4A6FAEE8E9 /* ImportViewModel.swift */; };
-		E531655180F7B1F73A3B0D4A /* KeyLibraryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0942DE0257788F260B6E0FFD /* KeyLibraryViewModel.swift */; };
-		5AD12869EC3F5AA47B1F5F11 /* LFSLibraryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 090E935E18D8BAA0B2A803E6 /* LFSLibraryViewModel.swift */; };
-		4BDD49E9F0E9FB4A26E50AB4 /* CameraView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDAC2F91EC0BFE8FC3986896 /* CameraView.swift */; };
-		E1D398EB55F896DFC5ED62AD /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 379A554720FE930A1BB84D85 /* ContentView.swift */; };
+		20D11F43EC75D1131B6DF211 /* Photo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BF9C394C8CBFAC9BF1B544E /* Photo.swift */; };
+		3C56778F6AC8C359F4F2823E /* EncryptionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6249E4A6E8D2FCA965E52BE2 /* EncryptionService.swift */; };
 		3F0A3B90014C3930FD2100AD /* GalleryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A594221EF7FC97D6F18FF21 /* GalleryView.swift */; };
-		F3108C4B9E18A5FEB5394492 /* ImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A17BEBA2770E632ED8A207EE /* ImportView.swift */; };
+		4BDD49E9F0E9FB4A26E50AB4 /* CameraView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDAC2F91EC0BFE8FC3986896 /* CameraView.swift */; };
 		59688185F608EE34360601EB /* KeyLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB486520A75BD2C446B5C9CA /* KeyLibraryView.swift */; };
+		5AD12869EC3F5AA47B1F5F11 /* LFSLibraryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 090E935E18D8BAA0B2A803E6 /* LFSLibraryViewModel.swift */; };
+		5FF444E4A1558147330590F0 /* LFSImportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAB25DC76A3584DAD8695E6C /* LFSImportService.swift */; };
 		6CD73670D8AC0B9EA68B4B34 /* LFSLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEC1AA6831EFD39F431E88DD /* LFSLibraryView.swift */; };
+		8DC3E684AC931000B5CBB3E3 /* KeyManagementService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55D3A223DDE51A08C2B1B45F /* KeyManagementService.swift */; };
+		A649C8EFCB689AA992E36953 /* StorageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA06E6851E41EDF17B5F10C8 /* StorageService.swift */; };
+		AB7FCD046A256CCB9FFA11C0 /* ImportViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 388BC8DE46198F4A6FAEE8E9 /* ImportViewModel.swift */; };
+		B53D6A4519D607019D85A584 /* LocafotoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 559527197DD219F3D89DAA92 /* LocafotoApp.swift */; };
+		C76CF81ABFC3C37D56B7AAA1 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81B77F5B270FBFC9720C6C88 /* SettingsView.swift */; };
+		D303F800CF9B73A5E8D2125A /* LFSFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = D11001146AB62450585325B2 /* LFSFile.swift */; };
+		D8F08234A4F83F6C25689701 /* PhotoImportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9ABC1545DEA6A8B699F0B524 /* PhotoImportService.swift */; };
+		D9F63D2F235C973F1C9BE8A5 /* LFSFileTrackingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD9BD8362970246AA87AF3F7 /* LFSFileTrackingService.swift */; };
+		E1D398EB55F896DFC5ED62AD /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 379A554720FE930A1BB84D85 /* ContentView.swift */; };
+		E531655180F7B1F73A3B0D4A /* KeyLibraryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0942DE0257788F260B6E0FFD /* KeyLibraryViewModel.swift */; };
+		E7E7E217CF1365C5CBE57637 /* GalleryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 830424A9CC82BF7567F84EE2 /* GalleryViewModel.swift */; };
+		F3108C4B9E18A5FEB5394492 /* ImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A17BEBA2770E632ED8A207EE /* ImportView.swift */; };
 		F5AE3FF61BFE8955958CC2A4 /* PINSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8534FE1A1E900B69A613CD9C /* PINSetupView.swift */; };
 		C76CF81ABFC3C37D56B7AAA1 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81B77F5B270FBFC9720C6C88 /* SettingsView.swift */; };
 		99812033B8BD7CDC0C7E876A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = CC3340C45202B29152467289 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		559527197DD219F3D89DAA92 /* LocafotoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocafotoApp.swift; sourceTree = "<group>"; };
-		D11001146AB62450585325B2 /* LFSFile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LFSFile.swift; sourceTree = "<group>"; };
-		1BF9C394C8CBFAC9BF1B544E /* Photo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Photo.swift; sourceTree = "<group>"; };
-		F6DFA1235A1EE674FB2D608B /* CameraService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraService.swift; sourceTree = "<group>"; };
-		6249E4A6E8D2FCA965E52BE2 /* EncryptionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EncryptionService.swift; sourceTree = "<group>"; };
-		55D3A223DDE51A08C2B1B45F /* KeyManagementService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyManagementService.swift; sourceTree = "<group>"; };
-		CD9BD8362970246AA87AF3F7 /* LFSFileTrackingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LFSFileTrackingService.swift; sourceTree = "<group>"; };
-		CAB25DC76A3584DAD8695E6C /* LFSImportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LFSImportService.swift; sourceTree = "<group>"; };
-		9ABC1545DEA6A8B699F0B524 /* PhotoImportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoImportService.swift; sourceTree = "<group>"; };
-		33C9B0AEE17C4BED043CEEAF /* SharingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharingService.swift; sourceTree = "<group>"; };
-		FA06E6851E41EDF17B5F10C8 /* StorageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageService.swift; sourceTree = "<group>"; };
-		6872FCB96BE94D959DA7E7F5 /* CameraViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraViewModel.swift; sourceTree = "<group>"; };
-		830424A9CC82BF7567F84EE2 /* GalleryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GalleryViewModel.swift; sourceTree = "<group>"; };
-		388BC8DE46198F4A6FAEE8E9 /* ImportViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportViewModel.swift; sourceTree = "<group>"; };
-		0942DE0257788F260B6E0FFD /* KeyLibraryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyLibraryViewModel.swift; sourceTree = "<group>"; };
+		0096DDB5D5C93DB7732319BF /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		090E935E18D8BAA0B2A803E6 /* LFSLibraryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LFSLibraryViewModel.swift; sourceTree = "<group>"; };
-		FDAC2F91EC0BFE8FC3986896 /* CameraView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraView.swift; sourceTree = "<group>"; };
+		0942DE0257788F260B6E0FFD /* KeyLibraryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyLibraryViewModel.swift; sourceTree = "<group>"; };
+		1BF9C394C8CBFAC9BF1B544E /* Photo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Photo.swift; sourceTree = "<group>"; };
+		33C9B0AEE17C4BED043CEEAF /* SharingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharingService.swift; sourceTree = "<group>"; };
 		379A554720FE930A1BB84D85 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		388BC8DE46198F4A6FAEE8E9 /* ImportViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportViewModel.swift; sourceTree = "<group>"; };
+		38AD7E1B56E85294CA6D0737 /* Locafoto.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Locafoto.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		559527197DD219F3D89DAA92 /* LocafotoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocafotoApp.swift; sourceTree = "<group>"; };
+		55D3A223DDE51A08C2B1B45F /* KeyManagementService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyManagementService.swift; sourceTree = "<group>"; };
+		6249E4A6E8D2FCA965E52BE2 /* EncryptionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EncryptionService.swift; sourceTree = "<group>"; };
+		6872FCB96BE94D959DA7E7F5 /* CameraViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraViewModel.swift; sourceTree = "<group>"; };
+		81B77F5B270FBFC9720C6C88 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		830424A9CC82BF7567F84EE2 /* GalleryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GalleryViewModel.swift; sourceTree = "<group>"; };
+		8534FE1A1E900B69A613CD9C /* PINSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PINSetupView.swift; sourceTree = "<group>"; };
 		9A594221EF7FC97D6F18FF21 /* GalleryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GalleryView.swift; sourceTree = "<group>"; };
+		9ABC1545DEA6A8B699F0B524 /* PhotoImportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoImportService.swift; sourceTree = "<group>"; };
 		A17BEBA2770E632ED8A207EE /* ImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportView.swift; sourceTree = "<group>"; };
+		CAB25DC76A3584DAD8695E6C /* LFSImportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LFSImportService.swift; sourceTree = "<group>"; };
 		CB486520A75BD2C446B5C9CA /* KeyLibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyLibraryView.swift; sourceTree = "<group>"; };
+		CD9BD8362970246AA87AF3F7 /* LFSFileTrackingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LFSFileTrackingService.swift; sourceTree = "<group>"; };
+		D11001146AB62450585325B2 /* LFSFile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LFSFile.swift; sourceTree = "<group>"; };
+		F6DFA1235A1EE674FB2D608B /* CameraService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraService.swift; sourceTree = "<group>"; };
+		FA06E6851E41EDF17B5F10C8 /* StorageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageService.swift; sourceTree = "<group>"; };
+		FDAC2F91EC0BFE8FC3986896 /* CameraView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraView.swift; sourceTree = "<group>"; };
 		FEC1AA6831EFD39F431E88DD /* LFSLibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LFSLibraryView.swift; sourceTree = "<group>"; };
 		8534FE1A1E900B69A613CD9C /* PINSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PINSetupView.swift; sourceTree = "<group>"; };
 		81B77F5B270FBFC9720C6C88 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		0096DDB5D5C93DB7732319BF /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		CC3340C45202B29152467289 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		38AD7E1B56E85294CA6D0737 /* Locafoto.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Locafoto.app; sourceTree = BUILT_PRODUCTS_DIR; };
+
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -75,6 +81,18 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		420CEB417186B52ECF642348 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				6872FCB96BE94D959DA7E7F5 /* CameraViewModel.swift */,
+				830424A9CC82BF7567F84EE2 /* GalleryViewModel.swift */,
+				388BC8DE46198F4A6FAEE8E9 /* ImportViewModel.swift */,
+				0942DE0257788F260B6E0FFD /* KeyLibraryViewModel.swift */,
+				090E935E18D8BAA0B2A803E6 /* LFSLibraryViewModel.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
 		450B220DE8EEB27904FC3DC4 = {
 			isa = PBXGroup;
 			children = (
@@ -83,42 +101,12 @@
 			);
 			sourceTree = "<group>";
 		};
-		9A76A62D587AD0C58292763F /* Products */ = {
+		45B877375D6D6297BAAF2860 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
-				38AD7E1B56E85294CA6D0737 /* Locafoto.app */,
+				0096DDB5D5C93DB7732319BF /* Info.plist */,
 			);
-			name = Products;
-			sourceTree = "<group>";
-		};
-		DFE6F2AF7C2803F50048E1F4 /* Locafoto */ = {
-			isa = PBXGroup;
-			children = (
-				FE910D29D648D8F2EA669AEF /* App */,
-				C454586A1F4E28C340BDC1AD /* Views */,
-				420CEB417186B52ECF642348 /* ViewModels */,
-				564EAF51B7DD4639ADD9B985 /* Services */,
-				9CF43B31E8845D861542A38E /* Models */,
-				45B877375D6D6297BAAF2860 /* Resources */,
-			);
-			path = Locafoto;
-			sourceTree = "<group>";
-		};
-		FE910D29D648D8F2EA669AEF /* App */ = {
-			isa = PBXGroup;
-			children = (
-				559527197DD219F3D89DAA92 /* LocafotoApp.swift */,
-			);
-			path = App;
-			sourceTree = "<group>";
-		};
-		9CF43B31E8845D861542A38E /* Models */ = {
-			isa = PBXGroup;
-			children = (
-				D11001146AB62450585325B2 /* LFSFile.swift */,
-				1BF9C394C8CBFAC9BF1B544E /* Photo.swift */,
-			);
-			path = Models;
+			path = Resources;
 			sourceTree = "<group>";
 		};
 		564EAF51B7DD4639ADD9B985 /* Services */ = {
@@ -136,16 +124,21 @@
 			path = Services;
 			sourceTree = "<group>";
 		};
-		420CEB417186B52ECF642348 /* ViewModels */ = {
+		9A76A62D587AD0C58292763F /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				6872FCB96BE94D959DA7E7F5 /* CameraViewModel.swift */,
-				830424A9CC82BF7567F84EE2 /* GalleryViewModel.swift */,
-				388BC8DE46198F4A6FAEE8E9 /* ImportViewModel.swift */,
-				0942DE0257788F260B6E0FFD /* KeyLibraryViewModel.swift */,
-				090E935E18D8BAA0B2A803E6 /* LFSLibraryViewModel.swift */,
+				38AD7E1B56E85294CA6D0737 /* Locafoto.app */,
 			);
-			path = ViewModels;
+			name = Products;
+			sourceTree = "<group>";
+		};
+		9CF43B31E8845D861542A38E /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				D11001146AB62450585325B2 /* LFSFile.swift */,
+				1BF9C394C8CBFAC9BF1B544E /* Photo.swift */,
+			);
+			path = Models;
 			sourceTree = "<group>";
 		};
 		C454586A1F4E28C340BDC1AD /* Views */ = {
@@ -163,13 +156,27 @@
 			path = Views;
 			sourceTree = "<group>";
 		};
-		45B877375D6D6297BAAF2860 /* Resources */ = {
+		DFE6F2AF7C2803F50048E1F4 /* Locafoto */ = {
 			isa = PBXGroup;
 			children = (
 				CC3340C45202B29152467289 /* Assets.xcassets */,
 				0096DDB5D5C93DB7732319BF /* Info.plist */,
+				FE910D29D648D8F2EA669AEF /* App */,
+				C454586A1F4E28C340BDC1AD /* Views */,
+				420CEB417186B52ECF642348 /* ViewModels */,
+				564EAF51B7DD4639ADD9B985 /* Services */,
+				9CF43B31E8845D861542A38E /* Models */,
+				45B877375D6D6297BAAF2860 /* Resources */,
 			);
-			path = Resources;
+			path = Locafoto;
+			sourceTree = "<group>";
+		};
+		FE910D29D648D8F2EA669AEF /* App */ = {
+			isa = PBXGroup;
+			children = (
+				559527197DD219F3D89DAA92 /* LocafotoApp.swift */,
+			);
+			path = App;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -271,68 +278,38 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
-		AD6D2BD8FC01D8BDFC72C453 /* Debug */ = {
+		3258DF972478A8F7CCBC60BA /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
-				ASYNC_AWAIT_ACTOR_CHECKING = 1;
-				CLANG_ANALYZER_NONNULL = YES;
-				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_ENABLE_OBJC_WEAK = YES;
-				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_COMMA = YES;
-				CLANG_WARN_CONSTANT_CONVERSION = YES;
-				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
-				CLANG_WARN_EMPTY_BODY = YES;
-				CLANG_WARN_ENUM_CONVERSION = YES;
-				CLANG_WARN_INFINITE_RECURSION = YES;
-				CLANG_WARN_INT_CONVERSION = YES;
-				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
-				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
-				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
-				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
-				CLANG_WARN_STRICT_PROTOTYPES = YES;
-				CLANG_WARN_SUSPICIOUS_MOVE = YES;
-				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				COPY_PHASE_STRIP = NO;
-				DEBUG_INFORMATION_FORMAT = dwarf;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_TESTABILITY = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu17;
-				GCC_DYNAMIC_NO_PIC = NO;
-				GCC_NO_COMMON_BLOCKS = YES;
-				GCC_OPTIMIZATION_LEVEL = 0;
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"DEBUG=1",
-					"$(inherited)",
-				);
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				GCC_WARN_UNUSED_VARIABLE = YES;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = F2S5EN2EM6;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Locafoto/Resources/Info.plist;
+				INFOPLIST_KEY_NSCameraUsageDescription = "Locafoto needs camera access to capture photos privately without saving to Camera Roll.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Locafoto can optionally export photos back to your library.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Locafoto needs access to import photos from your library for secure encryption.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
-				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
-				MTL_FAST_MATH = YES;
-				ONLY_ACTIVE_ARCH = YES;
-				SDKROOT = iphoneos;
-				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
-				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.locafoto.Locafoto;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
-			name = Debug;
+			name = Release;
 		};
 		4A3C647615E4BC4E985A5951 /* Release */ = {
 			isa = XCBuildConfiguration;
@@ -397,7 +374,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = F2S5EN2EM6;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Locafoto/Resources/Info.plist;
@@ -423,38 +400,68 @@
 			};
 			name = Debug;
 		};
-		3258DF972478A8F7CCBC60BA /* Release */ = {
+		AD6D2BD8FC01D8BDFC72C453 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
-				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = Locafoto/Resources/Info.plist;
-				INFOPLIST_KEY_NSCameraUsageDescription = "Locafoto needs camera access to capture photos privately without saving to Camera Roll.";
-				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Locafoto can optionally export photos back to your library.";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Locafoto needs access to import photos from your library for secure encryption.";
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
-				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
-				LD_RUNPATH_SEARCH_PATHS = (
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASYNC_AWAIT_ACTOR_CHECKING = 1;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
 					"$(inherited)",
-					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.locafoto.Locafoto;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
-			name = Release;
+			name = Debug;
 		};
 /* End XCBuildConfiguration section */
 
