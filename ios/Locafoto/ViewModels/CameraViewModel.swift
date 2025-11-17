@@ -48,7 +48,9 @@ class CameraViewModel: NSObject, ObservableObject {
 
     /// Stop the camera session
     func stopCamera() {
-        cameraService?.stopCamera(session: captureSession)
+        Task {
+            await cameraService?.stopCamera(session: captureSession)
+        }
     }
 
     /// Capture a photo
@@ -59,7 +61,7 @@ class CameraViewModel: NSObject, ObservableObject {
 
         do {
             // Capture photo data
-            guard let photoData = await cameraService?.capturePhoto(output: photoOutput) else {
+            guard let photoData = try await cameraService?.capturePhoto(output: photoOutput) else {
                 throw CameraError.captureFailed
             }
 

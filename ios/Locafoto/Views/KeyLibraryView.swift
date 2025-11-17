@@ -10,107 +10,147 @@ struct KeyLibraryView: View {
 
     var body: some View {
         NavigationView {
-            Group {
-                if viewModel.keys.isEmpty {
-                    EmptyKeyLibraryView(onCreateKey: { showCreateKey = true })
-                } else {
-                    List {
-                        Section(header: HStack {
-                            Text("Statistics")
-                            Spacer()
-                        }) {
-                            HStack {
-                                Image(systemName: "key.fill")
-                                    .foregroundColor(.blue)
-                                    .frame(width: 30)
-                                Text("Total Keys")
-                                Spacer()
-                                Text("\(viewModel.keys.count)")
-                                    .font(.headline)
-                            }
-
-                            HStack {
-                                Image(systemName: "doc.fill")
-                                    .foregroundColor(.green)
-                                    .frame(width: 30)
-                                Text("Files Encrypted")
-                                Spacer()
-                                Text("\(viewModel.totalFilesEncrypted)")
-                                    .font(.headline)
-                            }
-                        }
-
-                        Section(header: Text("Encryption Keys")) {
-                            ForEach(viewModel.keys) { key in
-                                KeyRow(key: key, fileCount: viewModel.fileCount(for: key.name))
-                                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                        Button(role: .destructive) {
-                                            keyToDelete = key
-                                            Task {
-                                                await viewModel.checkCanDelete(key)
-                                                showDeleteConfirmation = true
-                                            }
-                                        } label: {
-                                            Label("Delete", systemImage: "trash")
-                                        }
-                                    }
-                            }
-                        }
+            contentView
+                .navigationTitle("Encryption Keys")
+                .toolbar {
+                    toolbarContent
+                }
+                .sheet(isPresented: $showCreateKey) {
+                    createKeySheet
+                }
+                .sheet(isPresented: $showImportKey) {
+                    importKeySheet
+                }
+                .onAppear {
+                    Task {
+                        await viewModel.loadKeys()
                     }
                 }
+                .alert("Delete Key", isPresented: $showDeleteConfirmation, presenting: keyToDelete) { key in
+                    deleteAlertButtons(for: key)
+                } message: { key in
+                    deleteAlertMessage(for: key)
+                }
+        }
+    }
+    
+    @ViewBuilder
+    private var contentView: some View {
+        if viewModel.keys.isEmpty {
+            EmptyKeyLibraryView(onCreateKey: { showCreateKey = true })
+        } else {
+            keysList
+        }
+    }
+    
+    private var keysList: some View {
+        List {
+            statisticsSection
+            keysSection
+        }
+    }
+    
+    private var statisticsSection: some View {
+        Section(header: HStack {
+            Text("Statistics")
+            Spacer()
+        }) {
+            HStack {
+                Image(systemName: "key.fill")
+                    .foregroundColor(.blue)
+                    .frame(width: 30)
+                Text("Total Keys")
+                Spacer()
+                Text("\(viewModel.keys.count)")
+                    .font(.headline)
             }
-            .navigationTitle("Encryption Keys")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Menu {
-                        Button(action: { showCreateKey = true }) {
-                            Label("Create New Key", systemImage: "key.fill")
-                        }
 
-                        Button(action: { showImportKey = true }) {
-                            Label("Import Key File", systemImage: "square.and.arrow.down")
+            HStack {
+                Image(systemName: "doc.fill")
+                    .foregroundColor(.green)
+                    .frame(width: 30)
+                Text("Files Encrypted")
+                Spacer()
+                Text("\(viewModel.totalFilesEncrypted)")
+                    .font(.headline)
+            }
+        }
+    }
+    
+    private var keysSection: some View {
+        Section(header: Text("Encryption Keys")) {
+            ForEach(viewModel.keys) { key in
+                KeyRow(key: key, fileCount: viewModel.fileCount(for: key.name))
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        Button(role: .destructive) {
+                            keyToDelete = key
+                            Task {
+                                await viewModel.checkCanDelete(key)
+                                showDeleteConfirmation = true
+                            }
+                        } label: {
+                            Label("Delete", systemImage: "trash")
                         }
-                    } label: {
-                        Image(systemName: "plus")
                     }
-                }
             }
-            .sheet(isPresented: $showCreateKey) {
-                CreateKeyView { name in
-                    await viewModel.createKey(name: name, pin: appState.currentPin)
-                    showCreateKey = false
+        }
+    }
+    
+    private var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .navigationBarTrailing) {
+            Menu {
+                Button(action: { showCreateKey = true }) {
+                    Label("Create New Key", systemImage: "key.fill")
                 }
-            }
-            .sheet(isPresented: $showImportKey) {
-                ImportKeyView { name, keyData in
-                    await viewModel.importKey(name: name, keyData: keyData, pin: appState.currentPin)
-                    showImportKey = false
+
+                Button(action: { showImportKey = true }) {
+                    Label("Import Key File", systemImage: "square.and.arrow.down")
                 }
+            } label: {
+                Image(systemName: "plus")
             }
-            .onAppear {
+        }
+    }
+    
+    private var createKeySheet: some View {
+        CreateKeyView { name in
+            guard let pin = appState.currentPin else { return }
+            await viewModel.createKey(name: name, pin: pin)
+            showCreateKey = false
+        }
+    }
+    
+    private var importKeySheet: some View {
+        ImportKeyView { name, keyData in
+            guard let pin = appState.currentPin else { return }
+            await viewModel.importKey(name: name, keyData: keyData, pin: pin)
+            showImportKey = false
+        }
+    }
+    
+    @ViewBuilder
+    private func deleteAlertButtons(for key: KeyFile) -> some View {
+        let canDelete = viewModel.canDeleteKey(key)
+        if canDelete {
+            Button("Cancel", role: .cancel) { }
+            Button("Delete", role: .destructive) {
                 Task {
-                    await viewModel.loadKeys()
+                    await viewModel.deleteKey(key.id)
                 }
             }
-            .alert("Delete Key", isPresented: $showDeleteConfirmation, presenting: keyToDelete) { key in
-                if viewModel.canDeleteKey(key) {
-                    Button("Cancel", role: .cancel) { }
-                    Button("Delete", role: .destructive) {
-                        Task {
-                            await viewModel.deleteKey(key.id)
-                        }
-                    }
-                } else {
-                    Button("OK", role: .cancel) { }
-                }
-            } message: { key in
-                if viewModel.canDeleteKey(key) {
-                    Text("This will permanently delete the encryption key '\(key.name)'. This action cannot be undone.")
-                } else {
-                    let count = viewModel.fileCount(for: key.name)
-                    Text("Cannot delete this key. It is currently being used by \(count) file\(count == 1 ? "" : "s"). Delete the files first from the LFS Library.")
-                }
-            }
+        } else {
+            Button("OK", role: .cancel) { }
+        }
+    }
+    
+    @ViewBuilder
+    private func deleteAlertMessage(for key: KeyFile) -> some View {
+        let canDelete = viewModel.canDeleteKey(key)
+        if canDelete {
+            Text("This will permanently delete the encryption key '\(key.name)'. This action cannot be undone.")
+        } else {
+            let count = viewModel.fileCount(for: key.name)
+            Text("Cannot delete this key. It is currently being used by \(count) file\(count == 1 ? "" : "s"). Delete the files first from the LFS Library.")
         }
     }
 }

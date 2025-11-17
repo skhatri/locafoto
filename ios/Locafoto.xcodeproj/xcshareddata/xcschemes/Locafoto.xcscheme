@@ -14,7 +14,7 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "D41D8CD98F00B204E980099"
+               BlueprintIdentifier = "CA10225FAACD5F608F239943"
                BuildableName = "Locafoto.app"
                BlueprintName = "Locafoto"
                ReferencedContainer = "container:Locafoto.xcodeproj">
@@ -43,7 +43,7 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "D41D8CD98F00B204E980099"
+            BlueprintIdentifier = "CA10225FAACD5F608F239943"
             BuildableName = "Locafoto.app"
             BlueprintName = "Locafoto"
             ReferencedContainer = "container:Locafoto.xcodeproj">
@@ -60,7 +60,7 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "D41D8CD98F00B204E980099"
+            BlueprintIdentifier = "CA10225FAACD5F608F239943"
             BuildableName = "Locafoto.app"
             BlueprintName = "Locafoto"
             ReferencedContainer = "container:Locafoto.xcodeproj">
