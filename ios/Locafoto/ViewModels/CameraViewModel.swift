@@ -8,6 +8,9 @@ class CameraViewModel: NSObject, ObservableObject {
     @Published var showSuccessAlert = false
     @Published var showErrorAlert = false
     @Published var errorMessage: String?
+    @Published var isCameraReady = false
+    @Published var needsPermission = false
+    @Published var cameraStatusMessage = "Initializing camera..."
 
     private var photoOutput = AVCapturePhotoOutput()
     private var cameraService: CameraService?
@@ -20,16 +23,21 @@ class CameraViewModel: NSObject, ObservableObject {
 
         switch status {
         case .authorized:
+            needsPermission = false
             return
         case .notDetermined:
             let granted = await AVCaptureDevice.requestAccess(for: .video)
             if !granted {
-                errorMessage = "Camera access is required to capture photos"
-                showErrorAlert = true
+                needsPermission = true
+                cameraStatusMessage = "Camera access is required to capture photos"
+                isCameraReady = false
+            } else {
+                needsPermission = false
             }
         case .denied, .restricted:
-            errorMessage = "Please enable camera access in Settings"
-            showErrorAlert = true
+            needsPermission = true
+            cameraStatusMessage = "Please enable camera access in Settings to use the camera"
+            isCameraReady = false
         @unknown default:
             break
         }
@@ -37,12 +45,20 @@ class CameraViewModel: NSObject, ObservableObject {
 
     /// Start the camera session
     func startCamera() async {
+        // Don't start camera if permission denied
+        if needsPermission {
+            return
+        }
+
         do {
             cameraService = CameraService()
             try await cameraService?.setupCamera(session: captureSession, output: photoOutput)
+            isCameraReady = true
+            cameraStatusMessage = ""
         } catch {
-            errorMessage = "Failed to start camera: \(error.localizedDescription)"
-            showErrorAlert = true
+            isCameraReady = false
+            cameraStatusMessage = "Failed to start camera: \(error.localizedDescription)"
+            errorMessage = cameraStatusMessage
         }
     }
 

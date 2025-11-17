@@ -73,17 +73,32 @@ struct GalleryView: View {
 struct PhotoThumbnailView: View {
     let photo: Photo
     @State private var thumbnailImage: UIImage?
+    @State private var isLoading = true
+    @State private var loadError = false
 
     var body: some View {
         Group {
             if let image = thumbnailImage {
                 Image(uiImage: image)
                     .resizable()
-            } else {
+            } else if loadError {
+                Rectangle()
+                    .fill(Color.gray.opacity(0.3))
+                    .overlay(
+                        VStack(spacing: 4) {
+                            Image(systemName: "exclamationmark.triangle")
+                                .font(.caption)
+                            Text("Failed")
+                                .font(.caption2)
+                        }
+                        .foregroundColor(.red.opacity(0.7))
+                    )
+            } else if isLoading {
                 Rectangle()
                     .fill(Color.gray.opacity(0.3))
                     .overlay(
                         ProgressView()
+                            .controlSize(.small)
                     )
             }
         }
@@ -109,9 +124,15 @@ struct PhotoThumbnailView: View {
 
                 await MainActor.run {
                     thumbnailImage = UIImage(data: decryptedData)
+                    isLoading = false
+                    loadError = (thumbnailImage == nil)
                 }
             } catch {
                 print("Failed to load thumbnail: \(error)")
+                await MainActor.run {
+                    isLoading = false
+                    loadError = true
+                }
             }
         }
     }

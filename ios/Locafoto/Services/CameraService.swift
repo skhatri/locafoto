@@ -61,12 +61,14 @@ actor CameraService: NSObject {
         return try await withCheckedThrowingContinuation { continuation in
             self.photoContinuation = continuation
 
-            let settings = AVCapturePhotoSettings()
-            settings.isHighResolutionPhotoEnabled = true
-
             // Use HEIC if available for better compression
+            let settings: AVCapturePhotoSettings
             if output.availablePhotoCodecTypes.contains(.hevc) {
                 settings = AVCapturePhotoSettings(format: [AVVideoCodecKey: AVVideoCodecType.hevc])
+                settings.isHighResolutionPhotoEnabled = true
+            } else {
+                settings = AVCapturePhotoSettings()
+                settings.isHighResolutionPhotoEnabled = true
             }
 
             output.capturePhoto(with: settings, delegate: self)

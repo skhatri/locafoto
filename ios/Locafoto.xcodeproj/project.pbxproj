@@ -31,6 +31,7 @@
 		6CD73670D8AC0B9EA68B4B34 /* LFSLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEC1AA6831EFD39F431E88DD /* LFSLibraryView.swift */; };
 		F5AE3FF61BFE8955958CC2A4 /* PINSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8534FE1A1E900B69A613CD9C /* PINSetupView.swift */; };
 		C76CF81ABFC3C37D56B7AAA1 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81B77F5B270FBFC9720C6C88 /* SettingsView.swift */; };
+		99812033B8BD7CDC0C7E876A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = CC3340C45202B29152467289 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -59,6 +60,7 @@
 		8534FE1A1E900B69A613CD9C /* PINSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PINSetupView.swift; sourceTree = "<group>"; };
 		81B77F5B270FBFC9720C6C88 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		0096DDB5D5C93DB7732319BF /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		CC3340C45202B29152467289 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		38AD7E1B56E85294CA6D0737 /* Locafoto.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Locafoto.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -164,6 +166,7 @@
 		45B877375D6D6297BAAF2860 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				CC3340C45202B29152467289 /* Assets.xcassets */,
 				0096DDB5D5C93DB7732319BF /* Info.plist */,
 			);
 			path = Resources;
@@ -227,7 +230,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-			);
+							99812033B8BD7CDC0C7E876A /* Assets.xcassets in Resources */,
+);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
