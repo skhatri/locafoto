@@ -104,6 +104,12 @@
         </dict>
     </array>
 
+    <!-- Support opening documents in place -->
+    <key>LSSupportsOpeningDocumentsInPlace</key>
+    <true/>
+    <key>UISupportsDocumentBrowser</key>
+    <true/>
+
     <!-- URL Schemes (if needed for future features) -->
     <key>CFBundleURLTypes</key>
     <array>

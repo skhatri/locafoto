@@ -48,6 +48,7 @@ struct ContentView: View {
                 }
                 .tag(5)
         }
+        .tint(.locafotoPrimary)
     }
 }
 

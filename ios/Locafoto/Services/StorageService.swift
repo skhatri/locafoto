@@ -92,18 +92,26 @@ actor StorageService {
     }
 
     /// Save a shared photo (from AirDrop)
-    func saveSharedPhoto(_ photo: Photo, encryptedData: Data) async throws {
+    func saveSharedPhoto(_ photo: Photo, encryptedData: Data, thumbnail: Data? = nil) async throws {
         let photoDir = try photosSubdirectory
+        let thumbDir = try thumbnailsSubdirectory
 
-        // Create file URL
+        // Create file URLs
         let photoURL = photoDir.appendingPathComponent("\(photo.id.uuidString).encrypted")
+        let thumbURL = thumbDir.appendingPathComponent("\(photo.id.uuidString).thumb")
 
         // Write encrypted photo data
         try encryptedData.write(to: photoURL)
 
-        // Update photo with file path
+        // Write encrypted thumbnail if provided
+        if let thumbnail = thumbnail {
+            try thumbnail.write(to: thumbURL)
+        }
+
+        // Update photo with file paths
         var updatedPhoto = photo
         updatedPhoto.filePath = photoURL.path
+        updatedPhoto.thumbnailPath = thumbnail != nil ? thumbURL.path : nil
 
         try await PhotoStore.shared.add(updatedPhoto)
     }

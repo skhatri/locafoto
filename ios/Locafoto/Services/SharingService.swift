@@ -1,5 +1,6 @@
 import Foundation
 import UniformTypeIdentifiers
+import UIKit
 
 /// Service for sharing encrypted photos via AirDrop
 actor SharingService {
@@ -71,6 +72,26 @@ actor SharingService {
             throw SharingError.invalidBundleFormat
         }
 
+        // Decrypt the photo to generate thumbnail
+        let encryptionService = EncryptionService()
+        let decryptedData = try await encryptionService.decryptPhotoData(
+            photoData,
+            encryptedKey: encryptedKey,
+            iv: iv,
+            authTag: authTag
+        )
+
+        // Generate thumbnail
+        let thumbnailData = try generateThumbnail(from: decryptedData)
+
+        // Encrypt the thumbnail with the same key/iv/tag
+        let encryptedThumbnail = try await encryptionService.encryptPhotoData(
+            thumbnailData,
+            encryptedKey: encryptedKey,
+            iv: iv,
+            authTag: authTag
+        )
+
         // Create photo object
         let photo = Photo(
             id: photoID,
@@ -92,13 +113,37 @@ actor SharingService {
             isHidden: false
         )
 
-        // Save the encrypted photo
-        try await storageService.saveSharedPhoto(photo, encryptedData: photoData)
+        // Save the encrypted photo with thumbnail
+        try await storageService.saveSharedPhoto(photo, encryptedData: photoData, thumbnail: encryptedThumbnail)
 
         // Clean up temp file
         try? FileManager.default.removeItem(at: url)
 
         return photo
+    }
+
+    /// Generate thumbnail from photo data
+    private func generateThumbnail(from data: Data, size: CGFloat = 200) throws -> Data {
+        guard let image = UIImage(data: data) else {
+            throw SharingError.invalidBundleFormat
+        }
+
+        let scale = size / max(image.size.width, image.size.height)
+        let newSize = CGSize(
+            width: image.size.width * scale,
+            height: image.size.height * scale
+        )
+
+        UIGraphicsBeginImageContextWithOptions(newSize, true, 1.0)
+        image.draw(in: CGRect(origin: .zero, size: newSize))
+        let thumbnail = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+
+        guard let thumbnailData = thumbnail?.jpegData(compressionQuality: 0.8) else {
+            throw SharingError.invalidBundleFormat
+        }
+
+        return thumbnailData
     }
 }
 

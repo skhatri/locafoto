@@ -1,0 +1,17 @@
+{
+  "version": "1.0",
+  "photo": {
+    "id": "a0302001-5f52-4aa8-9772-17ffea7ed6ea",
+    "encryptedData": "zyed0idUt/1pQOICvZbDVOkgDU0VtzcbOfnuvXB1NvIGfCwlmv5PRjA1zqnvEaH2lSUhv3zpm8Y/Pdf8d1/jEJWiXQk=",
+    "encryptedKey": "JSgeKbMCyq0jAuHmK0YSCNcG2WQgDV2U793Nd9ywudif0+wHaowO+gOCLUNjyMEfxeLp+6cvhRJV0dBJ2xt7OlXll8vn5fWOhXWU5IfzWmtZkp6TnsOuBpOygLufM+atoJexIf+tfdjV+6OnvfXerbJI5XT2pFlX+LM0e7/Q10iaohnCsAM/g12cre29qTIMBV7HKHuLo1SUVhElTPkdQvkbj3HzVweRWso7X75Eagpc9pi2MAxdBkTM+O/MOpfwPFB9wqRjDIZLgutkozYC45QbUXzwIbg70q9p/e7+LK08ZSnQkbdwLTqu+/os8pX1O2rK8vaWjU+Dvx7/fdGGlg==",
+    "iv": "DrsXSKS0i+yi8kD4",
+    "authTag": "c8mFv3aJTq4hg4wFlYFzKQ=="
+  },
+  "metadata": {
+    "originalSize": 68,
+    "captureDate": "2025-11-17T11:56:26.148099Z",
+    "width": 1,
+    "height": 1,
+    "format": "PNG"
+  }
+}

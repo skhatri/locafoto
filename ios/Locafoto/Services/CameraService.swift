@@ -9,6 +9,9 @@ actor CameraService: NSObject {
     func setupCamera(session: AVCaptureSession, output: AVCapturePhotoOutput) throws {
         session.beginConfiguration()
 
+        // Set session preset for photo quality
+        session.sessionPreset = .photo
+
         // Get the back camera
         guard let camera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back) else {
             throw CameraServiceError.cameraNotAvailable
@@ -43,14 +46,14 @@ actor CameraService: NSObject {
         session.commitConfiguration()
 
         // Start the session on background thread
-        Task {
+        DispatchQueue.global(qos: .userInitiated).async {
             session.startRunning()
         }
     }
 
     /// Stop the camera session
     func stopCamera(session: AVCaptureSession) {
-        Task {
+        DispatchQueue.global(qos: .userInitiated).async {
             session.stopRunning()
         }
     }
@@ -58,22 +61,32 @@ actor CameraService: NSObject {
     /// Capture a photo and return the data
     /// IMPORTANT: This never saves to Camera Roll!
     func capturePhoto(output: AVCapturePhotoOutput) async throws -> Data {
-        return try await withCheckedThrowingContinuation { continuation in
-            self.photoContinuation = continuation
-
-
-            // Use HEIC if available for better compression
-            let settings: AVCapturePhotoSettings
-            if output.availablePhotoCodecTypes.contains(.hevc) {
-                settings = AVCapturePhotoSettings(format: [AVVideoCodecKey: AVVideoCodecType.hevc])
-                settings.isHighResolutionPhotoEnabled = true
-            } else {
-                settings = AVCapturePhotoSettings()
-                settings.isHighResolutionPhotoEnabled = true
+        return try await withCheckedThrowingContinuation { [weak self] continuation in
+            guard let self = self else {
+                continuation.resume(throwing: CameraServiceError.captureFailed)
+                return
             }
 
-            output.capturePhoto(with: settings, delegate: self)
+            Task {
+                await self.setPhotoContinuation(continuation)
+
+                // Use HEIC if available for better compression
+                let settings: AVCapturePhotoSettings
+                if output.availablePhotoCodecTypes.contains(.hevc) {
+                    settings = AVCapturePhotoSettings(format: [AVVideoCodecKey: AVVideoCodecType.hevc])
+                    settings.isHighResolutionPhotoEnabled = true
+                } else {
+                    settings = AVCapturePhotoSettings()
+                    settings.isHighResolutionPhotoEnabled = true
+                }
+
+                output.capturePhoto(with: settings, delegate: self)
+            }
         }
+    }
+
+    private func setPhotoContinuation(_ continuation: CheckedContinuation<Data, Error>) {
+        self.photoContinuation = continuation
     }
 }
 
@@ -117,6 +130,7 @@ enum CameraServiceError: LocalizedError {
     case cannotAddInput
     case cannotAddOutput
     case noImageData
+    case captureFailed
 
     var errorDescription: String? {
         switch self {
@@ -128,6 +142,8 @@ enum CameraServiceError: LocalizedError {
             return "Cannot add photo output to session"
         case .noImageData:
             return "Failed to get image data from photo"
+        case .captureFailed:
+            return "Camera capture failed"
         }
     }
 }
