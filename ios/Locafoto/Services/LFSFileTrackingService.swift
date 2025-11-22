@@ -8,6 +8,8 @@ struct LFSImportedFile: Identifiable, Codable {
     let originalFilename: String?
     let importDate: Date
     let fileSize: Int64
+    let iv: Data?  // IV for full image decryption
+    let authTag: Data?  // Auth tag for full image decryption
 }
 
 /// Service for tracking .lfs file imports and key usage
@@ -36,13 +38,27 @@ actor LFSFileTrackingService {
 
     /// Track an imported .lfs file
     func trackImport(photoId: UUID, keyName: String, originalFilename: String?, fileSize: Int64) async throws {
+        try await trackImportWithCrypto(
+            photoId: photoId,
+            keyName: keyName,
+            originalFilename: originalFilename,
+            fileSize: fileSize,
+            iv: nil,
+            authTag: nil
+        )
+    }
+
+    /// Track an imported file with crypto info for full image decryption
+    func trackImportWithCrypto(photoId: UUID, keyName: String, originalFilename: String?, fileSize: Int64, iv: Data?, authTag: Data?) async throws {
         let file = LFSImportedFile(
             id: UUID(),
             photoId: photoId,
             keyName: keyName,
             originalFilename: originalFilename,
             importDate: Date(),
-            fileSize: fileSize
+            fileSize: fileSize,
+            iv: iv,
+            authTag: authTag
         )
 
         let trackingDir = try trackingDirectory
@@ -51,6 +67,12 @@ actor LFSFileTrackingService {
         let encoder = JSONEncoder()
         let data = try encoder.encode(file)
         try data.write(to: fileURL)
+    }
+
+    /// Get tracking info for a photo
+    func getTrackingInfo(forPhotoId photoId: UUID) async throws -> LFSImportedFile? {
+        let allImports = try await getAllImports()
+        return allImports.first { $0.photoId == photoId }
     }
 
     /// Get all imported .lfs files
@@ -103,6 +125,12 @@ actor LFSFileTrackingService {
         for file in allImports where file.photoId == photoId {
             try await deleteTracking(fileId: file.id)
         }
+    }
+
+    /// Get key name for a photo
+    func getKeyName(forPhotoId photoId: UUID) async throws -> String? {
+        let allImports = try await getAllImports()
+        return allImports.first { $0.photoId == photoId }?.keyName
     }
 
     /// Get total statistics

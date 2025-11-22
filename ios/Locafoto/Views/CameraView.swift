@@ -3,6 +3,12 @@ import AVFoundation
 
 struct CameraView: View {
     @StateObject private var viewModel = CameraViewModel()
+    @EnvironmentObject var appState: AppState
+    @Binding var selectedTab: Int
+
+    init(selectedTab: Binding<Int> = .constant(1)) {
+        self._selectedTab = selectedTab
+    }
 
     var body: some View {
         NavigationView {
@@ -13,12 +19,79 @@ struct CameraView: View {
                         .ignoresSafeArea()
 
                     VStack {
+                        // Top controls: album selector and flip button
+                        HStack {
+                            // Flip camera button
+                            Button(action: {
+                                Task {
+                                    await viewModel.flipCamera()
+                                }
+                            }) {
+                                Image(systemName: "camera.rotate.fill")
+                                    .font(.title2)
+                                    .padding(12)
+                                    .background(.ultraThinMaterial)
+                                    .clipShape(Circle())
+                            }
+                            .padding()
+
+                            Spacer()
+
+                            // Album selector (album determines the key)
+                            if !viewModel.availableAlbums.isEmpty {
+                                Menu {
+                                    ForEach(viewModel.availableAlbums) { album in
+                                        Button(action: {
+                                            viewModel.selectedAlbumId = album.id
+                                            viewModel.selectedKeyName = album.keyName
+                                        }) {
+                                            HStack {
+                                                VStack(alignment: .leading) {
+                                                    Text(album.name)
+                                                    Text(album.keyName)
+                                                        .font(.caption2)
+                                                        .foregroundColor(.secondary)
+                                                }
+                                                if viewModel.selectedAlbumId == album.id {
+                                                    Image(systemName: "checkmark")
+                                                }
+                                            }
+                                        }
+                                    }
+                                } label: {
+                                    HStack(spacing: 6) {
+                                        Image(systemName: "rectangle.stack.fill")
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(viewModel.selectedAlbum?.name ?? "Select Album")
+                                                .font(.caption)
+                                                .fontWeight(.semibold)
+                                            if let keyName = viewModel.selectedKeyName {
+                                                HStack(spacing: 2) {
+                                                    Image(systemName: "key.fill")
+                                                        .font(.system(size: 8))
+                                                    Text(keyName)
+                                                        .font(.system(size: 10))
+                                                }
+                                                .foregroundColor(.secondary)
+                                            }
+                                        }
+                                    }
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
+                                    .background(.ultraThinMaterial)
+                                    .cornerRadius(20)
+                                }
+                                .padding()
+                            }
+                        }
+
                         Spacer()
 
                         // Ultra-modern capture button
                         Button(action: {
+                            guard let pin = appState.currentPin else { return }
                             Task {
-                                await viewModel.capturePhoto()
+                                await viewModel.capturePhoto(pin: pin)
                             }
                         }) {
                             ZStack {
@@ -74,7 +147,7 @@ struct CameraView: View {
                     VStack(spacing: 20) {
                         ZStack {
                             Circle()
-                                .fill(Color.locafotoLight)
+                                .fill(Color(.secondarySystemBackground))
                                 .frame(width: 120, height: 120)
                             Image(systemName: "camera.fill")
                                 .font(.system(size: 50))
@@ -118,6 +191,17 @@ struct CameraView: View {
             }
             .navigationTitle("Camera")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: {
+                        selectedTab = 0 // Switch to Gallery
+                    }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.title2)
+                            .foregroundStyle(.white.opacity(0.8))
+                    }
+                }
+            }
             .alert("Photo Saved", isPresented: $viewModel.showSuccessAlert) {
                 Button("OK", role: .cancel) { }
             } message: {
@@ -130,6 +214,8 @@ struct CameraView: View {
             }
             .onAppear {
                 Task {
+                    await viewModel.loadAlbums()
+                    await viewModel.loadKeys()
                     await viewModel.checkPermissions()
                     await viewModel.startCamera()
                 }

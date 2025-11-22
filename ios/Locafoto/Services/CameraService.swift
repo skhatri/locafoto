@@ -4,16 +4,18 @@ import UIKit
 /// Service for capturing photos directly without saving to Camera Roll
 actor CameraService: NSObject {
     private var photoContinuation: CheckedContinuation<Data, Error>?
+    private var currentPosition: AVCaptureDevice.Position = .back
 
     /// Set up the camera session
-    func setupCamera(session: AVCaptureSession, output: AVCapturePhotoOutput) throws {
+    func setupCamera(session: AVCaptureSession, output: AVCapturePhotoOutput, position: AVCaptureDevice.Position = .back) throws {
+        currentPosition = position
         session.beginConfiguration()
 
         // Set session preset for photo quality
         session.sessionPreset = .photo
 
-        // Get the back camera
-        guard let camera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back) else {
+        // Get the camera for specified position
+        guard let camera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: position) else {
             throw CameraServiceError.cameraNotAvailable
         }
 
@@ -49,6 +51,41 @@ actor CameraService: NSObject {
         DispatchQueue.global(qos: .userInitiated).async {
             session.startRunning()
         }
+    }
+
+    /// Flip camera between front and back
+    func flipCamera(session: AVCaptureSession, output: AVCapturePhotoOutput) throws {
+        let newPosition: AVCaptureDevice.Position = (currentPosition == .back) ? .front : .back
+
+        session.beginConfiguration()
+
+        // Remove existing input
+        if let currentInput = session.inputs.first as? AVCaptureDeviceInput {
+            session.removeInput(currentInput)
+        }
+
+        // Get camera for new position
+        guard let camera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: newPosition) else {
+            session.commitConfiguration()
+            throw CameraServiceError.cameraNotAvailable
+        }
+
+        // Add new input
+        let newInput = try AVCaptureDeviceInput(device: camera)
+        if session.canAddInput(newInput) {
+            session.addInput(newInput)
+            currentPosition = newPosition
+        } else {
+            session.commitConfiguration()
+            throw CameraServiceError.cannotAddInput
+        }
+
+        session.commitConfiguration()
+    }
+
+    /// Get current camera position
+    func getCurrentPosition() -> AVCaptureDevice.Position {
+        return currentPosition
     }
 
     /// Stop the camera session

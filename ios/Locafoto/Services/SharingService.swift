@@ -5,6 +5,7 @@ import UIKit
 /// Service for sharing encrypted photos via AirDrop
 actor SharingService {
     private let storageService = StorageService()
+    private let albumService = AlbumService()
 
     // MARK: - Export for Sharing
 
@@ -51,6 +52,17 @@ actor SharingService {
 
     /// Handle incoming .locaphoto file
     func handleIncomingShare(from url: URL) async throws -> Photo {
+        // Ensure we can access the file
+        let hasAccess = url.startAccessingSecurityScopedResource()
+        if !hasAccess {
+            print("⚠️ Warning: Could not access security-scoped resource")
+        }
+        defer {
+            if hasAccess {
+                url.stopAccessingSecurityScopedResource()
+            }
+        }
+        
         // Read the bundle file
         let jsonData = try Data(contentsOf: url)
 
@@ -92,6 +104,13 @@ actor SharingService {
             authTag: authTag
         )
 
+        // Get main album for imported photos
+        try await albumService.loadAlbums()
+        let albums = await albumService.getAllAlbums()
+        guard let mainAlbum = albums.first(where: { $0.isMain }) ?? albums.first else {
+            throw SharingError.noAlbumAvailable
+        }
+
         // Create photo object
         let photo = Photo(
             id: photoID,
@@ -108,6 +127,7 @@ actor SharingService {
             format: bundle.metadata.format,
             filePath: "",
             thumbnailPath: nil,
+            albumId: mainAlbum.id,
             tags: [],
             isFavorite: false,
             isHidden: false
@@ -178,6 +198,7 @@ enum SharingError: LocalizedError {
     case unsupportedVersion
     case invalidBundleFormat
     case importFailed
+    case noAlbumAvailable
 
     var errorDescription: String? {
         switch self {
@@ -187,6 +208,8 @@ enum SharingError: LocalizedError {
             return "Invalid share bundle format"
         case .importFailed:
             return "Failed to import shared photo"
+        case .noAlbumAvailable:
+            return "No album available to import photo"
         }
     }
 }

@@ -53,7 +53,7 @@ actor StorageService {
     // MARK: - Save Operations
 
     /// Save an encrypted photo and its thumbnail
-    func savePhoto(_ encryptedPhoto: EncryptedPhoto, thumbnail: Data) async throws {
+    func savePhoto(_ encryptedPhoto: EncryptedPhoto, thumbnail: Data, albumId: UUID) async throws {
         let photoDir = try photosSubdirectory
         let thumbDir = try thumbnailsSubdirectory
 
@@ -67,7 +67,7 @@ actor StorageService {
         // Write encrypted thumbnail
         try thumbnail.write(to: thumbURL)
 
-        // Save metadata to in-memory store (would be CoreData in production)
+        // Save metadata to persistent store
         let photo = Photo(
             id: encryptedPhoto.id,
             encryptedKeyData: encryptedPhoto.encryptedKey,
@@ -83,6 +83,7 @@ actor StorageService {
             format: encryptedPhoto.metadata.format,
             filePath: photoURL.path,
             thumbnailPath: thumbURL.path,
+            albumId: albumId,
             tags: [],
             isFavorite: false,
             isHidden: false
@@ -166,18 +167,45 @@ actor StorageService {
     }
 }
 
-// MARK: - In-Memory Photo Store (Replace with CoreData in production)
+// MARK: - Persistent Photo Store
 
 actor PhotoStore {
     static let shared = PhotoStore()
 
     private var photos: [Photo] = []
+    private let fileManager = FileManager.default
 
-    func add(_ photo: Photo) throws {
+    /// Get the metadata file URL
+    private var metadataURL: URL {
+        get throws {
+            let appSupport = try fileManager.url(
+                for: .applicationSupportDirectory,
+                in: .userDomainMask,
+                appropriateFor: nil,
+                create: true
+            )
+
+            let locafotoDir = appSupport.appendingPathComponent("Locafoto")
+
+            if !fileManager.fileExists(atPath: locafotoDir.path) {
+                try fileManager.createDirectory(at: locafotoDir, withIntermediateDirectories: true)
+            }
+
+            return locafotoDir.appendingPathComponent("photos_metadata.json")
+        }
+    }
+
+    func add(_ photo: Photo) async throws {
         // Remove existing if updating
         photos.removeAll { $0.id == photo.id }
         photos.append(photo)
         photos.sort { $0.captureDate > $1.captureDate }
+        try saveMetadata()
+
+        // Update album thumbnail
+        let albumService = AlbumService()
+        try? await albumService.loadAlbums()
+        await albumService.updateAlbumThumbnails(albumId: photo.albumId)
     }
 
     func getAll() -> [Photo] {
@@ -188,8 +216,59 @@ actor PhotoStore {
         return photos.first { $0.id == id }
     }
 
-    func remove(_ id: UUID) {
+    func remove(_ id: UUID) async {
+        // Get album ID before removing
+        let albumId = photos.first { $0.id == id }?.albumId
+
         photos.removeAll { $0.id == id }
+        try? saveMetadata()
+
+        // Update album thumbnail if we had an album
+        if let albumId = albumId {
+            let albumService = AlbumService()
+            try? await albumService.loadAlbums()
+            await albumService.updateAlbumThumbnails(albumId: albumId)
+        }
+    }
+
+    /// Get photos for a specific album
+    func getPhotos(forAlbum albumId: UUID) -> [Photo] {
+        return photos.filter { $0.albumId == albumId }
+    }
+
+    /// Update a photo's album
+    func updateAlbum(for photoId: UUID, to albumId: UUID) async {
+        guard let index = photos.firstIndex(where: { $0.id == photoId }) else { return }
+
+        let oldAlbumId = photos[index].albumId
+        photos[index].albumId = albumId
+        photos[index].modifiedDate = Date()
+        try? saveMetadata()
+
+        // Update thumbnails for both old and new albums
+        let albumService = AlbumService()
+        try? await albumService.loadAlbums()
+        await albumService.updateAlbumThumbnails(albumIds: [oldAlbumId, albumId])
+    }
+
+    /// Load photos from disk on app launch
+    func loadFromDisk() throws {
+        let url = try metadataURL
+        guard fileManager.fileExists(atPath: url.path) else {
+            photos = []
+            return
+        }
+
+        let data = try Data(contentsOf: url)
+        photos = try JSONDecoder().decode([Photo].self, from: data)
+        photos.sort { $0.captureDate > $1.captureDate }
+    }
+
+    /// Save photos metadata to disk
+    private func saveMetadata() throws {
+        let url = try metadataURL
+        let data = try JSONEncoder().encode(photos)
+        try data.write(to: url)
     }
 }
 

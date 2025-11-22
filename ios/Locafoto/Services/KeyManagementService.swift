@@ -122,6 +122,8 @@ actor KeyManagementService {
 
     /// Import a key that was shared externally
     func importKey(name: String, keyData: Data, pin: String) async throws -> KeyFile {
+        print("🔑 Importing key with name: '\(name)' (length: \(name.count), bytes: \(keyData.count))")
+
         let masterKey = try await getMasterKey(pin: pin)
 
         // Create symmetric key from data
@@ -143,6 +145,7 @@ actor KeyManagementService {
         // Save key file
         try await saveKeyFile(keyFile)
 
+        print("✅ Key imported successfully: '\(name)' -> \(keyFile.filename)")
         return keyFile
     }
 
@@ -231,9 +234,13 @@ actor KeyManagementService {
 
     private func loadKeyFile(byName name: String) async throws -> KeyFile {
         let keys = try await loadAllKeys()
+        print("🔍 Looking for key: '\(name)' among \(keys.count) keys: \(keys.map { "'\($0.name)'" }.joined(separator: ", "))")
+
         guard let keyFile = keys.first(where: { $0.name == name }) else {
+            print("❌ Key not found: '\(name)'")
             throw KeyManagementError.keyNotFound
         }
+        print("✅ Found key: '\(keyFile.name)'")
         return keyFile
     }
 
@@ -326,6 +333,50 @@ actor KeyManagementService {
             return true
         } catch {
             return false
+        }
+    }
+
+    /// Clear all keychain data for this app (for fresh install detection)
+    func clearAllKeychainData() {
+        // Delete PIN salt
+        let saltQuery: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: Self.pinSaltTag
+        ]
+        SecItemDelete(saltQuery as CFDictionary)
+
+        // Delete master key tag if stored
+        let masterKeyQuery: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: Self.masterKeyTag
+        ]
+        SecItemDelete(masterKeyQuery as CFDictionary)
+
+        print("🔐 Cleared all keychain data for fresh install")
+    }
+
+    /// Check if this is a fresh install (app data deleted but keychain persisted)
+    static func checkAndClearKeychainOnFreshInstall() {
+        let hasLaunchedKey = "com.locafoto.hasLaunchedBefore"
+        let defaults = UserDefaults.standard
+
+        if !defaults.bool(forKey: hasLaunchedKey) {
+            // First launch after install - clear any stale keychain data
+            let service = KeyManagementService()
+
+            // Run synchronously since this is called at app launch
+            let semaphore = DispatchSemaphore(value: 0)
+            Task {
+                await service.clearAllKeychainData()
+                semaphore.signal()
+            }
+            semaphore.wait()
+
+            // Mark as launched
+            defaults.set(true, forKey: hasLaunchedKey)
+            defaults.synchronize()
+
+            print("🆕 Fresh install detected - keychain cleared")
         }
     }
 }

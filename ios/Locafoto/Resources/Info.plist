@@ -30,7 +30,7 @@
     <key>NSPhotoLibraryAddUsageDescription</key>
     <string>Locafoto can optionally export photos back to your library.</string>
 
-    <!-- Custom UTI for .locaphoto and .lfs files -->
+    <!-- Custom UTI for .locaphoto, .lfs, and .lfkey files -->
     <key>UTExportedTypeDeclarations</key>
     <array>
         <dict>
@@ -77,38 +77,85 @@
                 </array>
             </dict>
         </dict>
+        <dict>
+            <key>UTTypeIdentifier</key>
+            <string>com.locafoto.key</string>
+            <key>UTTypeDescription</key>
+            <string>Locafoto Encryption Key</string>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.data</string>
+                <string>public.content</string>
+            </array>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <array>
+                    <string>lfkey</string>
+                </array>
+                <key>public.mime-type</key>
+                <array>
+                    <string>application/x-locafoto-key</string>
+                </array>
+            </dict>
+        </dict>
     </array>
 
-    <!-- Document Types - Handle incoming .locaphoto and .lfs files -->
+    <!-- Document Types - Handle incoming .locaphoto, .lfs, and .lfkey files -->
     <key>CFBundleDocumentTypes</key>
     <array>
         <dict>
             <key>CFBundleTypeName</key>
             <string>Locafoto Encrypted Photo</string>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
             <key>LSHandlerRank</key>
             <string>Owner</string>
             <key>LSItemContentTypes</key>
             <array>
                 <string>com.locafoto.encrypted-photo</string>
             </array>
+            <!-- Prevent iOS from saving to Files app first -->
+            <key>LSTypeIsPackage</key>
+            <false/>
         </dict>
         <dict>
             <key>CFBundleTypeName</key>
             <string>Locafoto Shared File</string>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
             <key>LSHandlerRank</key>
             <string>Owner</string>
             <key>LSItemContentTypes</key>
             <array>
                 <string>com.locafoto.lfs</string>
             </array>
+            <!-- Prevent iOS from saving to Files app first -->
+            <key>LSTypeIsPackage</key>
+            <false/>
+        </dict>
+        <dict>
+            <key>CFBundleTypeName</key>
+            <string>Locafoto Encryption Key</string>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>LSHandlerRank</key>
+            <string>Owner</string>
+            <key>LSItemContentTypes</key>
+            <array>
+                <string>com.locafoto.key</string>
+            </array>
+            <!-- Prevent iOS from saving to Files app first -->
+            <key>LSTypeIsPackage</key>
+            <false/>
         </dict>
     </array>
 
-    <!-- Support opening documents in place -->
+    <!-- Disable document browser - we handle files directly via onOpenURL -->
     <key>LSSupportsOpeningDocumentsInPlace</key>
-    <true/>
+    <false/>
     <key>UISupportsDocumentBrowser</key>
-    <true/>
+    <false/>
 
     <!-- URL Schemes (if needed for future features) -->
     <key>CFBundleURLTypes</key>

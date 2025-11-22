@@ -11,17 +11,9 @@ struct PINSetupView: View {
 
     var body: some View {
         ZStack {
-            // Animated gradient background
-            LinearGradient(
-                colors: [
-                    Color.locafotoLight,
-                    Color.white,
-                    Color.locafotoPurple.opacity(0.1)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
+            // Adaptive background for dark/light mode
+            Color(.systemBackground)
+                .ignoresSafeArea()
 
             VStack(spacing: 35) {
                 Spacer()
@@ -82,9 +74,9 @@ struct PINSetupView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 15))
                         .overlay(
                             RoundedRectangle(cornerRadius: 15)
-                                .stroke(
-                                    pin.isEmpty ? Color.gray.opacity(0.3) : LinearGradient(
-                                        colors: [Color.locafotoPrimary, Color.locafotoAccent],
+                                .strokeBorder(
+                                    LinearGradient(
+                                        colors: pin.isEmpty ? [Color.gray.opacity(0.3), Color.gray.opacity(0.3)] : [Color.locafotoPrimary, Color.locafotoAccent],
                                         startPoint: .leading,
                                         endPoint: .trailing
                                     ),
@@ -102,9 +94,9 @@ struct PINSetupView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 15))
                         .overlay(
                             RoundedRectangle(cornerRadius: 15)
-                                .stroke(
-                                    confirmPin.isEmpty ? Color.gray.opacity(0.3) : LinearGradient(
-                                        colors: [Color.locafotoPrimary, Color.locafotoAccent],
+                                .strokeBorder(
+                                    LinearGradient(
+                                        colors: confirmPin.isEmpty ? [Color.gray.opacity(0.3), Color.gray.opacity(0.3)] : [Color.locafotoPrimary, Color.locafotoAccent],
                                         startPoint: .leading,
                                         endPoint: .trailing
                                     ),
@@ -182,6 +174,7 @@ struct PINUnlockView: View {
     @State private var pin = ""
     @State private var isUnlocking = false
     @State private var showError = false
+    @EnvironmentObject var appState: AppState
 
     let onUnlock: (String) async -> Bool
 
@@ -212,6 +205,21 @@ struct PINUnlockView: View {
             Text("Unlock your encrypted files")
                 .font(.body)
                 .foregroundColor(.secondary)
+
+            // Show pending imports indicator
+            if appState.pendingImportCount > 0 {
+                HStack {
+                    Image(systemName: "arrow.down.circle.fill")
+                        .foregroundColor(.locafotoAccent)
+                    Text("\(appState.pendingImportCount) file(s) waiting to import")
+                        .font(.caption)
+                        .foregroundColor(.locafotoAccent)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(Color.locafotoAccent.opacity(0.1))
+                .cornerRadius(8)
+            }
 
             SecureField("PIN", text: $pin)
                 .textFieldStyle(RoundedBorderTextFieldStyle())

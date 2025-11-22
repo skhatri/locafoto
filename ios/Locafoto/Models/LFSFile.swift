@@ -34,11 +34,23 @@ struct LFSFile {
 
         // Extract key name from first 128 bytes
         let keyNameData = data.prefix(headerSize)
-        guard let keyName = String(data: keyNameData, encoding: .utf8)?
-            .trimmingCharacters(in: .controlCharacters)
+
+        // Find the actual string length (before null padding)
+        var actualLength = headerSize
+        for i in 0..<headerSize {
+            if keyNameData[i] == 0 {
+                actualLength = i
+                break
+            }
+        }
+
+        let trimmedKeyData = keyNameData.prefix(actualLength)
+        guard let keyName = String(data: trimmedKeyData, encoding: .utf8)?
             .trimmingCharacters(in: .whitespaces) else {
             throw LFSError.invalidKeyName
         }
+
+        print("📦 Parsed LFS key name: '\(keyName)' (raw length: \(actualLength))")
 
         // Extract encrypted data, nonce, and tag
         let contentStart = headerSize
@@ -102,6 +114,7 @@ enum LFSError: LocalizedError {
     case keyNameTooLong
     case keyNotFound
     case decryptionFailed
+    case noAlbumAvailable
 
     var errorDescription: String? {
         switch self {
@@ -115,6 +128,8 @@ enum LFSError: LocalizedError {
             return "Encryption key not found"
         case .decryptionFailed:
             return "Failed to decrypt file"
+        case .noAlbumAvailable:
+            return "No album available to import photo"
         }
     }
 }

@@ -7,9 +7,21 @@ actor LFSImportService {
     private let keyManagementService = KeyManagementService()
     private let storageService = StorageService()
     private let trackingService = LFSFileTrackingService()
+    private let albumService = AlbumService()
 
     /// Handle incoming .lfs file from AirDrop
     func handleIncomingLFSFile(from url: URL, pin: String) async throws -> Photo {
+        // Ensure we can access the file
+        let hasAccess = url.startAccessingSecurityScopedResource()
+        if !hasAccess {
+            print("⚠️ Warning: Could not access security-scoped resource")
+        }
+        defer {
+            if hasAccess {
+                url.stopAccessingSecurityScopedResource()
+            }
+        }
+        
         // Read the LFS file
         let fileData = try Data(contentsOf: url)
         let originalFilename = url.lastPathComponent
@@ -21,6 +33,22 @@ actor LFSImportService {
 
         // Get the encryption key by name
         let encryptionKey = try await keyManagementService.getKey(byName: lfsFile.keyName, pin: pin)
+
+        // Find target album: prefer matching key, then main album (default gallery), then any album
+        try await albumService.loadAlbums()
+        let albums = await albumService.getAllAlbums()
+        
+        // Priority: 1) Album with matching key, 2) Main album (default gallery), 3) Any album
+        let targetAlbum = albums.first(where: { $0.keyName == lfsFile.keyName })
+            ?? albums.first(where: { $0.isMain })
+            ?? albums.first
+
+        guard let targetAlbum = targetAlbum else {
+            throw LFSError.noAlbumAvailable
+        }
+        
+        let albumId = targetAlbum.id
+        print("📁 Saving .lfs file to album: '\(targetAlbum.name)' (main: \(targetAlbum.isMain))")
 
         // Decrypt the file
         let nonce = try AES.GCM.Nonce(data: lfsFile.nonce)
@@ -51,7 +79,7 @@ actor LFSImportService {
         )
 
         // Save to storage
-        try await storageService.savePhoto(encryptedPhoto, thumbnail: encryptedThumbnail)
+        try await storageService.savePhoto(encryptedPhoto, thumbnail: encryptedThumbnail, albumId: albumId)
 
         // Create Photo object
         let photo = Photo(
@@ -69,6 +97,7 @@ actor LFSImportService {
             format: "LFS",
             filePath: "",
             thumbnailPath: nil,
+            albumId: albumId,
             tags: ["lfs", "imported"],
             isFavorite: false,
             isHidden: false

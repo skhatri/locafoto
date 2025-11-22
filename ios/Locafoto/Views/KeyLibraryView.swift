@@ -1,11 +1,15 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct KeyLibraryView: View {
     @StateObject private var viewModel = KeyLibraryViewModel()
     @State private var showCreateKey = false
     @State private var showImportKey = false
+    @State private var showFilePicker = false
     @State private var showDeleteConfirmation = false
     @State private var keyToDelete: KeyFile?
+    @State private var importError: String?
+    @State private var showImportError = false
     @EnvironmentObject var appState: AppState
 
     var body: some View {
@@ -21,9 +25,34 @@ struct KeyLibraryView: View {
                 .sheet(isPresented: $showImportKey) {
                     importKeySheet
                 }
+                .sheet(isPresented: $showFilePicker) {
+                    DocumentPickerView(
+                        contentTypes: [UTType(filenameExtension: "lfkey") ?? .data],
+                        onPick: { url in
+                            Task {
+                                await importKeyFromFile(url)
+                            }
+                        }
+                    )
+                }
+                .alert("Import Error", isPresented: $showImportError) {
+                    Button("OK", role: .cancel) { }
+                } message: {
+                    Text(importError ?? "Failed to import key")
+                }
                 .onAppear {
                     Task {
                         await viewModel.loadKeys()
+                    }
+                }
+                .onChange(of: appState.shouldRefreshKeys) { shouldRefresh in
+                    if shouldRefresh {
+                        Task {
+                            await viewModel.loadKeys()
+                            await MainActor.run {
+                                appState.shouldRefreshKeys = false
+                            }
+                        }
                     }
                 }
                 .alert("Delete Key", isPresented: $showDeleteConfirmation, presenting: keyToDelete) { key in
@@ -103,8 +132,12 @@ struct KeyLibraryView: View {
                     Label("Create New Key", systemImage: "key.fill")
                 }
 
+                Button(action: { showFilePicker = true }) {
+                    Label("Import from Files", systemImage: "folder")
+                }
+
                 Button(action: { showImportKey = true }) {
-                    Label("Import Key File", systemImage: "square.and.arrow.down")
+                    Label("Enter Key Manually", systemImage: "keyboard")
                 }
             } label: {
                 Image(systemName: "plus")
@@ -116,6 +149,10 @@ struct KeyLibraryView: View {
         CreateKeyView { name in
             guard let pin = appState.currentPin else { return }
             await viewModel.createKey(name: name, pin: pin)
+            showCreateKey = false
+        } onCreateWithData: { name, keyData in
+            guard let pin = appState.currentPin else { return }
+            await viewModel.importKey(name: name, keyData: keyData, pin: pin)
             showCreateKey = false
         }
     }
@@ -151,6 +188,36 @@ struct KeyLibraryView: View {
         } else {
             let count = viewModel.fileCount(for: key.name)
             Text("Cannot delete this key. It is currently being used by \(count) file\(count == 1 ? "" : "s"). Delete the files first from the LFS Library.")
+        }
+    }
+
+    private func importKeyFromFile(_ url: URL) async {
+        guard let pin = appState.currentPin else {
+            importError = "No PIN available"
+            showImportError = true
+            return
+        }
+
+        do {
+            // Start accessing the security-scoped resource
+            guard url.startAccessingSecurityScopedResource() else {
+                throw NSError(domain: "KeyImport", code: 1, userInfo: [NSLocalizedDescriptionKey: "Cannot access file"])
+            }
+            defer { url.stopAccessingSecurityScopedResource() }
+
+            // Read the key file
+            let fileData = try Data(contentsOf: url)
+
+            // Decode the shared key structure
+            let decoder = JSONDecoder()
+            let sharedKey = try decoder.decode(SharedKeyFile.self, from: fileData)
+
+            // Import the key
+            await viewModel.importKey(name: sharedKey.name, keyData: sharedKey.keyData, pin: pin)
+
+        } catch {
+            importError = error.localizedDescription
+            showImportError = true
         }
     }
 }
@@ -252,8 +319,18 @@ struct CreateKeyView: View {
     @Environment(\.dismiss) var dismiss
     @State private var keyName = ""
     @State private var isCreating = false
+    @State private var showAdvanced = false
+    @State private var customKeyHex = ""
+    @State private var showError = false
+    @State private var errorMessage = ""
 
     let onCreate: (String) async -> Void
+    let onCreateWithData: ((String, Data) async -> Void)?
+
+    init(onCreate: @escaping (String) async -> Void, onCreateWithData: ((String, Data) async -> Void)? = nil) {
+        self.onCreate = onCreate
+        self.onCreateWithData = onCreateWithData
+    }
 
     var body: some View {
         NavigationView {
@@ -262,8 +339,26 @@ struct CreateKeyView: View {
                     TextField("Key Name", text: $keyName)
                 }
 
-                Section(footer: Text("This key will be used to encrypt/decrypt files. You can share files encrypted with this key, and anyone with the same key can decrypt them.")) {
-                    EmptyView()
+                Section {
+                    Toggle("Custom Key Data", isOn: $showAdvanced)
+                }
+
+                if showAdvanced {
+                    Section(header: Text("Key Data (Hex)")) {
+                        TextEditor(text: $customKeyHex)
+                            .font(.system(.body, design: .monospaced))
+                            .frame(height: 100)
+                            .autocapitalization(.none)
+                            .disableAutocorrection(true)
+                    }
+
+                    Section(footer: Text("Enter 64 hex characters (32 bytes) for a custom key. Leave empty to auto-generate.")) {
+                        EmptyView()
+                    }
+                } else {
+                    Section(footer: Text("A secure random key will be generated automatically. You can share files encrypted with this key.")) {
+                        EmptyView()
+                    }
                 }
             }
             .navigationTitle("Create Encryption Key")
@@ -278,15 +373,51 @@ struct CreateKeyView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Create") {
                         Task {
-                            isCreating = true
-                            await onCreate(keyName)
-                            isCreating = false
+                            await createKey()
                         }
                     }
                     .disabled(keyName.isEmpty || isCreating)
                 }
             }
+            .alert("Error", isPresented: $showError) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(errorMessage)
+            }
         }
+    }
+
+    private func createKey() async {
+        isCreating = true
+
+        if showAdvanced && !customKeyHex.isEmpty {
+            // Custom key data
+            let cleanHex = customKeyHex.replacingOccurrences(of: " ", with: "")
+                .replacingOccurrences(of: "\n", with: "")
+
+            guard let keyData = Data(hexString: cleanHex) else {
+                errorMessage = "Invalid hexadecimal format"
+                showError = true
+                isCreating = false
+                return
+            }
+
+            guard keyData.count == 32 else {
+                errorMessage = "Key must be exactly 32 bytes (64 hex characters)"
+                showError = true
+                isCreating = false
+                return
+            }
+
+            if let onCreateWithData = onCreateWithData {
+                await onCreateWithData(keyName, keyData)
+            }
+        } else {
+            // Auto-generate key
+            await onCreate(keyName)
+        }
+
+        isCreating = false
     }
 }
 
@@ -394,6 +525,39 @@ extension Data {
 
     var hexString: String {
         map { String(format: "%02x", $0) }.joined()
+    }
+}
+
+// MARK: - Document Picker
+
+struct DocumentPickerView: UIViewControllerRepresentable {
+    let contentTypes: [UTType]
+    let onPick: (URL) -> Void
+
+    func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
+        let picker = UIDocumentPickerViewController(forOpeningContentTypes: contentTypes)
+        picker.delegate = context.coordinator
+        picker.allowsMultipleSelection = false
+        return picker
+    }
+
+    func updateUIViewController(_ uiViewController: UIDocumentPickerViewController, context: Context) {}
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onPick: onPick)
+    }
+
+    class Coordinator: NSObject, UIDocumentPickerDelegate {
+        let onPick: (URL) -> Void
+
+        init(onPick: @escaping (URL) -> Void) {
+            self.onPick = onPick
+        }
+
+        func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+            guard let url = urls.first else { return }
+            onPick(url)
+        }
     }
 }
 

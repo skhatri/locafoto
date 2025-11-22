@@ -13,14 +13,22 @@ extension Color {
     /// Deep teal - dark mode primary
     static let locafotoDark = Color(red: 0.0, green: 0.5, blue: 0.5) // #008080
 
-    /// Light mint - subtle backgrounds
-    static let locafotoLight = Color(red: 0.9, green: 1.0, blue: 0.98) // #E6FFFA
+    /// Light mint - subtle backgrounds (light mode) / Dark teal (dark mode)
+    static let locafotoLight = Color("LocafotoLight")
 
     /// Neon teal - for highlights and glows
     static let locafotoNeon = Color(red: 0.0, green: 0.95, blue: 0.85) // #00F2D9
 
     /// Soft purple - complementary accent
     static let locafotoPurple = Color(red: 0.6, green: 0.4, blue: 0.9) // #9966E6
+
+    // MARK: - Adaptive Background Colors
+
+    /// Background color that adapts to light/dark mode
+    static let locafotoBackground = Color("LocafotoBackground")
+
+    /// Secondary background for cards/sections
+    static let locafotoSecondaryBackground = Color("LocafotoSecondaryBackground")
 
     // MARK: - Semantic Colors
 

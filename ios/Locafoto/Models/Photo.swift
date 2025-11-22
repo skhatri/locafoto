@@ -28,6 +28,7 @@ struct Photo: Identifiable, Codable {
     var thumbnailPath: String?
 
     // Organization
+    var albumId: UUID  // Every photo belongs to exactly one album
     var tags: [String]
     var isFavorite: Bool
     var isHidden: Bool
