@@ -1,5 +1,4 @@
 import SwiftUI
-import CryptoKit
 import Foundation
 
 struct GalleryView: View {
@@ -560,43 +559,32 @@ struct PhotoDetailView: View {
     }
 
     private func loadFullImage() {
-        guard let pin = appState.currentPin else {
-            isLoading = false
-            return
-        }
-
         Task {
             do {
                 let storageService = StorageService()
-                let trackingService = LFSFileTrackingService()
-                let keyManagementService = KeyManagementService()
+                let encryptionService = EncryptionService()
 
                 let imageData = try await storageService.loadPhoto(for: photo.id)
 
-                // Get the tracking info for this photo (contains LFS key name and crypto info)
-                guard let trackingInfo = try await trackingService.getTrackingInfo(forPhotoId: photo.id) else {
-                    throw NSError(domain: "Gallery", code: 1, userInfo: [NSLocalizedDescriptionKey: "No key found for photo"])
-                }
-
-                // Get the encryption key
-                let encryptionKey = try await keyManagementService.getKey(byName: trackingInfo.keyName, pin: pin)
-
-                // Use IV and tag from tracking info (for full image)
-                guard let iv = trackingInfo.iv, let authTag = trackingInfo.authTag else {
-                    throw NSError(domain: "Gallery", code: 2, userInfo: [NSLocalizedDescriptionKey: "Missing crypto info"])
-                }
-
-                // Decrypt photo with LFS key
-                let nonce = try AES.GCM.Nonce(data: iv)
-                let sealedBox = try AES.GCM.SealedBox(
-                    nonce: nonce,
-                    ciphertext: imageData,
-                    tag: authTag
+                // Decrypt with master key (same as thumbnails)
+                let decryptedData = try await encryptionService.decryptPhotoData(
+                    imageData,
+                    encryptedKey: photo.encryptedKeyData,
+                    iv: photo.ivData,
+                    authTag: photo.authTagData
                 )
-                let decryptedData = try AES.GCM.open(sealedBox, using: encryptionKey)
+
+                // Validate image data
+                guard let image = UIImage(data: decryptedData) else {
+                    print("Failed to create UIImage from decrypted data (\(decryptedData.count) bytes)")
+                    await MainActor.run {
+                        isLoading = false
+                    }
+                    return
+                }
 
                 await MainActor.run {
-                    fullImage = UIImage(data: decryptedData)
+                    fullImage = image
                     isLoading = false
                 }
             } catch {
@@ -876,50 +864,19 @@ struct AddToAlbumSheet: View {
             if sourceAlbum.keyName == targetAlbum.keyName {
                 await PhotoStore.shared.updateAlbum(for: photo.id, to: targetAlbum.id)
             } else {
-                // Different keys - need to re-encrypt
-                let storageService = StorageService()
-                let keyManagementService = KeyManagementService()
+                // Different keys - but photos are stored with master key, not album key
+                // Just update the albumId and tracking
                 let trackingService = LFSFileTrackingService()
 
-                // Load and decrypt the photo with source key
-                let encryptedData = try await storageService.loadPhoto(for: photo.id)
-
-                guard let trackingInfo = try await trackingService.getTrackingInfo(forPhotoId: photo.id),
-                      let iv = trackingInfo.iv,
-                      let authTag = trackingInfo.authTag else {
-                    throw NSError(domain: "Move", code: 2, userInfo: [NSLocalizedDescriptionKey: "Missing crypto info"])
-                }
-
-                let sourceKey = try await keyManagementService.getKey(byName: sourceAlbum.keyName, pin: pin)
-                let nonce = try AES.GCM.Nonce(data: iv)
-                let sealedBox = try AES.GCM.SealedBox(nonce: nonce, ciphertext: encryptedData, tag: authTag)
-                let decryptedData = try AES.GCM.open(sealedBox, using: sourceKey)
-
-                // Re-encrypt with target key
-                let targetKey = try await keyManagementService.getKey(byName: targetAlbum.keyName, pin: pin)
-                let newNonce = AES.GCM.Nonce()
-                let newSealedBox = try AES.GCM.seal(decryptedData, using: targetKey, nonce: newNonce)
-
-                // Save re-encrypted data
-                let photoDir = try FileManager.default.url(
-                    for: .applicationSupportDirectory,
-                    in: .userDomainMask,
-                    appropriateFor: nil,
-                    create: true
-                ).appendingPathComponent("Locafoto/Photos")
-
-                let photoURL = photoDir.appendingPathComponent("\(photo.id.uuidString).encrypted")
-                try newSealedBox.ciphertext.write(to: photoURL)
-
-                // Update tracking with new key and crypto info
+                // Update tracking with new key name
                 try await trackingService.deleteTracking(byPhotoId: photo.id)
                 try await trackingService.trackImportWithCrypto(
                     photoId: photo.id,
                     keyName: targetAlbum.keyName,
                     originalFilename: nil,
-                    fileSize: Int64(decryptedData.count),
-                    iv: Data(newNonce),
-                    authTag: newSealedBox.tag
+                    fileSize: photo.originalSize,
+                    iv: nil,
+                    authTag: nil
                 )
 
                 // Update photo's albumId
