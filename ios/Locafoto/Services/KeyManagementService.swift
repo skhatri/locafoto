@@ -204,6 +204,31 @@ actor KeyManagementService {
         try fileManager.removeItem(at: keyFileURL)
     }
 
+    /// Export a key as .lfkey file for sharing
+    func exportKey(byName name: String, pin: String) async throws -> URL {
+        // Get the decrypted key
+        let encryptionKey = try await getKey(byName: name, pin: pin)
+
+        // Extract key data
+        let keyData = encryptionKey.withUnsafeBytes { Data($0) }
+
+        // Create SharedKeyFile structure
+        let sharedKey = SharedKeyFile(name: name, keyData: keyData)
+
+        // Encode to JSON
+        let encoder = JSONEncoder()
+        let jsonData = try encoder.encode(sharedKey)
+
+        // Write to temp file
+        let tempDir = FileManager.default.temporaryDirectory
+        let filename = "\(name).lfkey"
+        let fileURL = tempDir.appendingPathComponent(filename)
+
+        try jsonData.write(to: fileURL)
+
+        return fileURL
+    }
+
     // MARK: - Private Helpers
 
     private func getKeysDirectory() throws -> URL {

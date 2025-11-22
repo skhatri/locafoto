@@ -1,9 +1,13 @@
 import SwiftUI
+import UIKit
 
 struct AlbumsView: View {
     @StateObject private var viewModel = AlbumViewModel()
     @EnvironmentObject var appState: AppState
     @State private var showCreateAlbum = false
+    @State private var albumToShare: Album?
+    @State private var shareURLs: [URL] = []
+    @State private var isPreparingShare = false
 
     var body: some View {
         NavigationView {
@@ -62,6 +66,15 @@ struct AlbumsView: View {
                                         AlbumCardView(album: album)
                                     }
                                     .contextMenu {
+                                        Button {
+                                            Task {
+                                                await shareAlbum(album)
+                                            }
+                                        } label: {
+                                            Label("Share Album", systemImage: "square.and.arrow.up")
+                                        }
+                                        .disabled(album.photoCount == 0)
+
                                         Button(role: .destructive) {
                                             Task {
                                                 await viewModel.deleteAlbum(album)
@@ -89,6 +102,29 @@ struct AlbumsView: View {
             .sheet(isPresented: $showCreateAlbum) {
                 CreateAlbumSheet(viewModel: viewModel)
             }
+            .sheet(isPresented: .init(
+                get: { !shareURLs.isEmpty },
+                set: { if !$0 { shareURLs = [] } }
+            )) {
+                ShareSheet(activityItems: shareURLs)
+            }
+            .overlay {
+                if isPreparingShare {
+                    ZStack {
+                        Color.black.opacity(0.4)
+                            .ignoresSafeArea()
+                        VStack(spacing: 16) {
+                            ProgressView()
+                                .scaleEffect(1.5)
+                            Text("Preparing album...")
+                                .foregroundColor(.white)
+                        }
+                        .padding(30)
+                        .background(Color(.systemBackground).opacity(0.9))
+                        .cornerRadius(16)
+                    }
+                }
+            }
             .onAppear {
                 Task {
                     await viewModel.loadAlbums()
@@ -97,6 +133,53 @@ struct AlbumsView: View {
             }
         }
     }
+
+    private func shareAlbum(_ album: Album) async {
+        guard let pin = appState.currentPin else {
+            ToastManager.shared.showError("PIN not available")
+            return
+        }
+
+        guard album.photoCount > 0 else {
+            ToastManager.shared.showError("Album has no photos to share")
+            return
+        }
+
+        await MainActor.run {
+            isPreparingShare = true
+        }
+
+        do {
+            let lfsService = LFSImportService()
+            let urls = try await lfsService.createAlbumShareBundle(for: album, pin: pin)
+
+            await MainActor.run {
+                isPreparingShare = false
+                shareURLs = urls
+            }
+        } catch {
+            await MainActor.run {
+                isPreparingShare = false
+                ToastManager.shared.showError("Failed to prepare album: \(error.localizedDescription)")
+            }
+        }
+    }
+}
+
+// MARK: - Share Sheet
+
+struct ShareSheet: UIViewControllerRepresentable {
+    let activityItems: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        let controller = UIActivityViewController(
+            activityItems: activityItems,
+            applicationActivities: nil
+        )
+        return controller
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
 struct AlbumCardView: View {
@@ -340,6 +423,8 @@ struct AlbumDetailView: View {
     @State private var showPINSetup = false
     @State private var showPrivacyToggleConfirm = false
     @State private var currentAlbum: Album
+    @State private var shareURLs: [URL] = []
+    @State private var isPreparingShare = false
     @EnvironmentObject var appState: AppState
 
     private let albumService = AlbumService.shared
@@ -444,9 +529,44 @@ struct AlbumDetailView: View {
         .navigationTitle(currentAlbum.name)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button(action: { showPrivacyToggleConfirm = true }) {
-                    Image(systemName: currentAlbum.isPrivate ? "eye.slash.fill" : "eye.fill")
-                        .foregroundColor(currentAlbum.isPrivate ? .locafotoPrimary : .secondary)
+                HStack(spacing: 16) {
+                    Button(action: {
+                        Task {
+                            await shareAlbumFromDetail()
+                        }
+                    }) {
+                        Image(systemName: "square.and.arrow.up")
+                            .foregroundColor(albumPhotos.isEmpty ? .secondary : .locafotoPrimary)
+                    }
+                    .disabled(albumPhotos.isEmpty)
+
+                    Button(action: { showPrivacyToggleConfirm = true }) {
+                        Image(systemName: currentAlbum.isPrivate ? "eye.slash.fill" : "eye.fill")
+                            .foregroundColor(currentAlbum.isPrivate ? .locafotoPrimary : .secondary)
+                    }
+                }
+            }
+        }
+        .sheet(isPresented: .init(
+            get: { !shareURLs.isEmpty },
+            set: { if !$0 { shareURLs = [] } }
+        )) {
+            ShareSheet(activityItems: shareURLs)
+        }
+        .overlay {
+            if isPreparingShare {
+                ZStack {
+                    Color.black.opacity(0.4)
+                        .ignoresSafeArea()
+                    VStack(spacing: 16) {
+                        ProgressView()
+                            .scaleEffect(1.5)
+                        Text("Preparing album...")
+                            .foregroundColor(.white)
+                    }
+                    .padding(30)
+                    .background(Color(.systemBackground).opacity(0.9))
+                    .cornerRadius(16)
                 }
             }
         }
@@ -582,6 +702,37 @@ struct AlbumDetailView: View {
         } catch {
             await MainActor.run {
                 ToastManager.shared.showError("Failed to update privacy: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    private func shareAlbumFromDetail() async {
+        guard let pin = appState.currentPin else {
+            ToastManager.shared.showError("PIN not available")
+            return
+        }
+
+        guard !albumPhotos.isEmpty else {
+            ToastManager.shared.showError("Album has no photos to share")
+            return
+        }
+
+        await MainActor.run {
+            isPreparingShare = true
+        }
+
+        do {
+            let lfsService = LFSImportService()
+            let urls = try await lfsService.createAlbumShareBundle(for: currentAlbum, pin: pin)
+
+            await MainActor.run {
+                isPreparingShare = false
+                shareURLs = urls
+            }
+        } catch {
+            await MainActor.run {
+                isPreparingShare = false
+                ToastManager.shared.showError("Failed to prepare album: \(error.localizedDescription)")
             }
         }
     }
