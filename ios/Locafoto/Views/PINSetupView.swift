@@ -174,6 +174,7 @@ struct PINUnlockView: View {
     @State private var pin = ""
     @State private var isUnlocking = false
     @State private var showError = false
+    @State private var hasAttemptedFaceID = false
     @EnvironmentObject var appState: AppState
 
     let onUnlock: (String) async -> Bool
@@ -193,12 +194,12 @@ struct PINUnlockView: View {
                     )
                     .frame(width: 140, height: 140)
 
-                Image(systemName: "lock.fill")
+                Image(systemName: appState.isFaceIDEnabled ? "faceid" : "lock.fill")
                     .font(.system(size: 60))
                     .foregroundColor(.white)
             }
 
-            Text("Enter PIN")
+            Text(appState.isFaceIDEnabled ? "Face ID" : "Enter PIN")
                 .font(.largeTitle)
                 .fontWeight(.bold)
 
@@ -221,6 +222,33 @@ struct PINUnlockView: View {
                 .cornerRadius(8)
             }
 
+            // Face ID button when enabled
+            if appState.isFaceIDEnabled {
+                Button(action: {
+                    Task {
+                        await unlockWithFaceID()
+                    }
+                }) {
+                    HStack {
+                        Image(systemName: "faceid")
+                            .font(.system(size: 24))
+                        Text("Unlock with Face ID")
+                            .font(.headline)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: 50)
+                .foregroundColor(.white)
+                .background(Color.locafotoPrimary)
+                .cornerRadius(10)
+                .padding(.horizontal, 40)
+                .disabled(isUnlocking)
+
+                Text("or enter PIN")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
             SecureField("PIN", text: $pin)
                 .textFieldStyle(RoundedBorderTextFieldStyle())
                 .keyboardType(.numberPad)
@@ -240,7 +268,7 @@ struct PINUnlockView: View {
                     ProgressView()
                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
                 } else {
-                    Text("Unlock")
+                    Text("Unlock with PIN")
                         .font(.headline)
                 }
             }
@@ -260,6 +288,17 @@ struct PINUnlockView: View {
 
             Spacer()
         }
+        .onAppear {
+            // Auto-trigger Face ID on appear (only once)
+            if appState.isFaceIDEnabled && !hasAttemptedFaceID {
+                hasAttemptedFaceID = true
+                Task {
+                    // Small delay to let the view fully appear
+                    try? await Task.sleep(nanoseconds: 300_000_000)
+                    await unlockWithFaceID()
+                }
+            }
+        }
     }
 
     private func unlock() async {
@@ -275,6 +314,20 @@ struct PINUnlockView: View {
             pin = ""
         }
     }
+
+    private func unlockWithFaceID() async {
+        isUnlocking = true
+        showError = false
+
+        let success = await appState.unlockWithFaceID()
+
+        isUnlocking = false
+
+        if !success {
+            // Face ID failed, user can try PIN
+            showError = false // Don't show error for Face ID failure
+        }
+    }
 }
 
 #Preview("Setup") {
@@ -287,4 +340,5 @@ struct PINUnlockView: View {
     PINUnlockView { pin in
         return pin == "1234"
     }
+    .environmentObject(AppState())
 }

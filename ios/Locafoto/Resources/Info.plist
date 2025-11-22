@@ -30,6 +30,9 @@
     <key>NSPhotoLibraryAddUsageDescription</key>
     <string>Locafoto can optionally export photos back to your library.</string>
 
+    <key>NSFaceIDUsageDescription</key>
+    <string>Locafoto uses Face ID to securely unlock the app and protect your encrypted photos.</string>
+
     <!-- Custom UTI for .locaphoto, .lfs, and .lfkey files -->
     <key>UTExportedTypeDeclarations</key>
     <array>
