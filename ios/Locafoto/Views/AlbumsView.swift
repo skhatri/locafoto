@@ -105,52 +105,59 @@ struct AlbumCardView: View {
     @State private var lastImage: UIImage?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 6) {
             // Cover image with overlay effect
-            ZStack {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color(.secondarySystemBackground))
-                    .aspectRatio(1, contentMode: .fit)
+            GeometryReader { geometry in
+                ZStack {
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color(.secondarySystemBackground))
 
-                if album.photoCount == 0 {
-                    // Empty album
-                    Image(systemName: "rectangle.stack.fill")
-                        .font(.system(size: 40))
-                        .foregroundColor(.locafotoPrimary.opacity(0.5))
-                } else if let first = firstImage {
-                    if let last = lastImage {
-                        // Two images - overlay effect
-                        ZStack {
-                            Image(uiImage: last)
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                                .clipShape(RoundedRectangle(cornerRadius: 10))
-                                .offset(x: 4, y: 4)
-                                .opacity(0.7)
+                    if album.photoCount == 0 {
+                        // Empty album
+                        Image(systemName: "rectangle.stack.fill")
+                            .font(.system(size: 40))
+                            .foregroundColor(.locafotoPrimary.opacity(0.5))
+                    } else if let first = firstImage {
+                        if let last = lastImage {
+                            // Two images - overlay effect
+                            ZStack {
+                                Image(uiImage: last)
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                                    .frame(width: geometry.size.width - 8, height: geometry.size.width - 8)
+                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                                    .offset(x: 4, y: 4)
+                                    .opacity(0.7)
 
+                                Image(uiImage: first)
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                                    .frame(width: geometry.size.width, height: geometry.size.width)
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                            }
+                        } else {
+                            // Single image
                             Image(uiImage: first)
                                 .resizable()
                                 .aspectRatio(contentMode: .fill)
+                                .frame(width: geometry.size.width, height: geometry.size.width)
                                 .clipShape(RoundedRectangle(cornerRadius: 12))
                         }
                     } else {
-                        // Single image
-                        Image(uiImage: first)
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                        // Loading
+                        ProgressView()
+                            .controlSize(.small)
                     }
-                } else {
-                    // Loading
-                    ProgressView()
-                        .controlSize(.small)
                 }
+                .frame(width: geometry.size.width, height: geometry.size.width)
             }
+            .aspectRatio(1, contentMode: .fit)
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
                     .stroke(Color.locafotoPrimary.opacity(0.2), lineWidth: 1)
             )
             .shadow(color: .locafotoPrimary.opacity(0.1), radius: 5)
+            .clipped()
 
             // Album info
             VStack(alignment: .leading, spacing: 4) {
