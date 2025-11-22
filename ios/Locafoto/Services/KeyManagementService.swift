@@ -379,6 +379,68 @@ actor KeyManagementService {
             print("🆕 Fresh install detected - keychain cleared")
         }
     }
+
+    // MARK: - Face ID PIN Storage
+
+    private static let faceIDPinTag = "com.locafoto.faceid.pin"
+
+    /// Store PIN securely for Face ID unlock
+    /// This stores the PIN encrypted in the keychain with biometric protection
+    static func storePinForFaceID(_ pin: String) {
+        guard let pinData = pin.data(using: .utf8) else { return }
+
+        // Delete existing first
+        let deleteQuery: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: faceIDPinTag
+        ]
+        SecItemDelete(deleteQuery as CFDictionary)
+
+        // Store with biometric protection
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: faceIDPinTag,
+            kSecAttrAccount as String: "faceid_pin",
+            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
+            kSecValueData as String: pinData
+        ]
+
+        let status = SecItemAdd(query as CFDictionary, nil)
+        if status == errSecSuccess {
+            print("🔐 PIN stored for Face ID unlock")
+        } else {
+            print("❌ Failed to store PIN for Face ID: \(status)")
+        }
+    }
+
+    /// Get stored PIN for Face ID unlock
+    static func getStoredPinForFaceID() -> String? {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: faceIDPinTag,
+            kSecAttrAccount as String: "faceid_pin",
+            kSecReturnData as String: true
+        ]
+
+        var result: AnyObject?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+
+        guard status == errSecSuccess, let pinData = result as? Data else {
+            return nil
+        }
+
+        return String(data: pinData, encoding: .utf8)
+    }
+
+    /// Remove stored PIN for Face ID
+    static func removePinForFaceID() {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: faceIDPinTag
+        ]
+        SecItemDelete(query as CFDictionary)
+        print("🔐 Removed PIN for Face ID unlock")
+    }
 }
 
 // Import CommonCrypto for PBKDF2

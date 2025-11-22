@@ -3,6 +3,7 @@ import SwiftUI
 @main
 struct LocafotoApp: App {
     @StateObject private var appState = AppState()
+    @Environment(\.scenePhase) private var scenePhase
 
     init() {
         // Clear keychain on fresh install (app deleted but keychain persisted)
@@ -13,6 +14,9 @@ struct LocafotoApp: App {
         WindowGroup {
             RootView()
                 .environmentObject(appState)
+                .onChange(of: scenePhase) { _, newPhase in
+                    handleScenePhaseChange(newPhase)
+                }
                 .onOpenURL { url in
                     print("🔵 onOpenURL CALLED with: \(url)")
                     print("🔵 URL path: \(url.path)")
@@ -364,6 +368,28 @@ struct LocafotoApp: App {
         try data.write(to: targetURL)
         print("📁 Saved received file to: \(targetURL.path)")
     }
+
+    /// Handle scene phase changes for background locking
+    private func handleScenePhaseChange(_ phase: ScenePhase) {
+        switch phase {
+        case .background:
+            // Lock app when going to background if setting is enabled
+            if appState.lockOnBackground && appState.isUnlocked {
+                Task { @MainActor in
+                    appState.lock()
+                    print("🔒 App locked due to background transition")
+                }
+            }
+        case .active:
+            // App became active - could trigger Face ID here if needed
+            break
+        case .inactive:
+            // App is transitioning
+            break
+        @unknown default:
+            break
+        }
+    }
 }
 
 /// Structure for shared key files (.lfkey)
@@ -603,11 +629,31 @@ class AppState: ObservableObject {
     @Published var keyImportSuccess: String?
     @Published var pendingImportCount: Int = 0
 
+    // Face ID / Biometric settings
+    @Published var isFaceIDEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(isFaceIDEnabled, forKey: "isFaceIDEnabled")
+        }
+    }
+    @Published var lockOnBackground: Bool {
+        didSet {
+            UserDefaults.standard.set(lockOnBackground, forKey: "lockOnBackground")
+        }
+    }
+
     var currentPin: String?
 
     private let keyManagementService = KeyManagementService()
     private let albumService = AlbumService()
     private let seedDataService = SeedDataService()
+    let biometricService = BiometricService()
+
+    override init() {
+        // Load saved settings
+        self.isFaceIDEnabled = UserDefaults.standard.bool(forKey: "isFaceIDEnabled")
+        self.lockOnBackground = UserDefaults.standard.bool(forKey: "lockOnBackground")
+        super.init()
+    }
 
     /// Check if PIN is already set up
     func checkPinStatus() async {
@@ -668,7 +714,69 @@ class AppState: ObservableObject {
             return false
         }
     }
-    
+
+    /// Unlock app with Face ID (requires PIN to be stored securely)
+    func unlockWithFaceID() async -> Bool {
+        guard isFaceIDEnabled else { return false }
+
+        do {
+            let success = try await biometricService.authenticate(reason: "Unlock Locafoto")
+            if success {
+                // Get PIN from keychain for decryption operations
+                if let storedPin = KeyManagementService.getStoredPinForFaceID() {
+                    currentPin = storedPin
+                    isUnlocked = true
+
+                    // Load saved photos from disk
+                    try? await PhotoStore.shared.loadFromDisk()
+
+                    // Load albums and check for main album
+                    try? await albumService.loadAlbums()
+                    let hasMain = await albumService.hasMainAlbum()
+                    if !hasMain {
+                        needsMainAlbumSetup = true
+                    }
+
+                    shouldRefreshGallery = true
+
+                    // Process pending temp files
+                    Task {
+                        await processPendingTempFiles(pin: storedPin)
+                    }
+
+                    return true
+                }
+            }
+            return false
+        } catch {
+            print("Face ID authentication failed: \(error)")
+            return false
+        }
+    }
+
+    /// Enable Face ID and store PIN securely for Face ID unlock
+    func enableFaceID(with pin: String) async -> Bool {
+        do {
+            let success = try await biometricService.authenticate(reason: "Enable Face ID for Locafoto")
+            if success {
+                // Store PIN securely in keychain for Face ID unlock
+                KeyManagementService.storePinForFaceID(pin)
+                isFaceIDEnabled = true
+                return true
+            }
+            return false
+        } catch {
+            print("Failed to enable Face ID: \(error)")
+            return false
+        }
+    }
+
+    /// Disable Face ID and remove stored PIN
+    func disableFaceID() {
+        KeyManagementService.removePinForFaceID()
+        isFaceIDEnabled = false
+    }
+
     /// Process any pending temp files that were saved while app was locked
     private func processPendingTempFiles(pin: String) async {
         let fileManager = FileManager.default

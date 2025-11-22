@@ -37,6 +37,7 @@ enum ThumbnailStyle: Int, CaseIterable {
 }
 
 struct SettingsView: View {
+    @EnvironmentObject var appState: AppState
     @AppStorage("autoDeleteFromCameraRoll") private var autoDeleteFromCameraRoll = false
     @AppStorage("preserveMetadata") private var preserveMetadata = true
     @AppStorage("generateThumbnails") private var generateThumbnails = true
@@ -47,6 +48,9 @@ struct SettingsView: View {
     @State private var showDeleteConfirmation = false
     @State private var fileToDelete: ReceivedFileInfo?
     @State private var orphanToDelete: OrphanedPhotoInfo?
+    @State private var showFaceIDError = false
+    @State private var faceIDErrorMessage = ""
+    @State private var isFaceIDAvailable = false
 
     private var thumbnailStyle: ThumbnailStyle {
         ThumbnailStyle(rawValue: thumbnailStyleRaw) ?? .blurred
@@ -78,6 +82,44 @@ struct SettingsView: View {
                     Toggle("Preserve Photo Metadata", isOn: $preserveMetadata)
 
                     Text("Keep EXIF data including location, camera settings, and timestamps")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+
+                Section(header: Text("App Lock")) {
+                    if isFaceIDAvailable {
+                        Toggle("Use Face ID to Unlock", isOn: Binding(
+                            get: { appState.isFaceIDEnabled },
+                            set: { newValue in
+                                Task {
+                                    if newValue {
+                                        await enableFaceID()
+                                    } else {
+                                        appState.disableFaceID()
+                                    }
+                                }
+                            }
+                        ))
+
+                        Text("Unlock the app with Face ID instead of entering your PIN")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    } else {
+                        HStack {
+                            Image(systemName: "faceid")
+                                .foregroundColor(.secondary)
+                            Text("Face ID not available")
+                                .foregroundColor(.secondary)
+                        }
+
+                        Text("Face ID is not set up on this device. Please enable Face ID in Settings to use this feature.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+
+                    Toggle("Lock When Backgrounded", isOn: $appState.lockOnBackground)
+
+                    Text("Automatically lock the app when it goes to the background. Requires Face ID or PIN to unlock.")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -243,6 +285,12 @@ struct SettingsView: View {
                 checkPhotoAccessStatus()
                 loadReceivedFiles()
                 loadOrphanedPhotos()
+                checkFaceIDAvailability()
+            }
+            .alert("Face ID Error", isPresented: $showFaceIDError) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(faceIDErrorMessage)
             }
             .alert("Delete File", isPresented: $showDeleteConfirmation) {
                 Button("Cancel", role: .cancel) {
@@ -284,6 +332,24 @@ struct SettingsView: View {
             photoAccessStatus = "Not Set"
         @unknown default:
             photoAccessStatus = "Unknown"
+        }
+    }
+
+    private func checkFaceIDAvailability() {
+        isFaceIDAvailable = appState.biometricService.isFaceIDAvailable()
+    }
+
+    private func enableFaceID() async {
+        guard let pin = appState.currentPin else {
+            faceIDErrorMessage = "PIN is required to enable Face ID. Please unlock with your PIN first."
+            showFaceIDError = true
+            return
+        }
+
+        let success = await appState.enableFaceID(with: pin)
+        if !success {
+            faceIDErrorMessage = "Failed to enable Face ID. Please try again."
+            showFaceIDError = true
         }
     }
 
@@ -483,4 +549,5 @@ struct OrphanedPhotoInfo: Identifiable {
 
 #Preview {
     SettingsView()
+        .environmentObject(AppState())
 }
