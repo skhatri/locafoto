@@ -676,6 +676,10 @@ class AppState: ObservableObject {
             isPinSet = true
             isUnlocked = true
 
+            // Load albums and ensure main album exists
+            try? await albumService.loadAlbums()
+            await ensureMainAlbumExists(pin: pin)
+
             // Load seed data on first install
             await seedDataService.loadSeedDataIfNeeded()
             shouldRefreshGallery = true
@@ -695,12 +699,9 @@ class AppState: ObservableObject {
                 // Load saved photos from disk
                 try? await PhotoStore.shared.loadFromDisk()
 
-                // Load albums and check for main album
+                // Load albums and ensure main album exists
                 try? await albumService.loadAlbums()
-                let hasMain = await albumService.hasMainAlbum()
-                if !hasMain {
-                    needsMainAlbumSetup = true
-                }
+                await ensureMainAlbumExists(pin: pin)
 
                 shouldRefreshGallery = true
 
@@ -733,12 +734,9 @@ class AppState: ObservableObject {
                     // Load saved photos from disk
                     try? await PhotoStore.shared.loadFromDisk()
 
-                    // Load albums and check for main album
+                    // Load albums and ensure main album exists
                     try? await albumService.loadAlbums()
-                    let hasMain = await albumService.hasMainAlbum()
-                    if !hasMain {
-                        needsMainAlbumSetup = true
-                    }
+                    await ensureMainAlbumExists(pin: storedPin)
 
                     shouldRefreshGallery = true
 
@@ -902,7 +900,41 @@ class AppState: ObservableObject {
         }
     }
 
-    /// Create main album
+    /// Ensure main album exists - auto-create if it doesn't
+    func ensureMainAlbumExists(pin: String) async {
+        // Check if main album already exists
+        let hasMain = await albumService.hasMainAlbum()
+        if hasMain {
+            return
+        }
+
+        // No main album exists - create one automatically
+        do {
+            // Load available keys
+            let keys = try await keyManagementService.loadAllKeys()
+            
+            let keyName: String
+            if let firstKey = keys.first {
+                // Use first available key
+                keyName = firstKey.name
+            } else {
+                // No keys exist - create a default "Main" key
+                print("No keys found, creating default 'Main' key...")
+                _ = try await keyManagementService.createKey(name: "Main", pin: pin)
+                keyName = "Main"
+            }
+            
+            // Create main album with the key
+            _ = try await albumService.createAlbum(name: "Main", keyName: keyName, isMain: true)
+            print("✅ Auto-created main album with key: \(keyName)")
+        } catch {
+            print("❌ Failed to auto-create main album: \(error)")
+            // If auto-creation fails, fall back to manual setup
+            needsMainAlbumSetup = true
+        }
+    }
+
+    /// Create main album (kept for backward compatibility)
     func createMainAlbum(keyName: String) async {
         do {
             _ = try await albumService.createAlbum(name: "Main", keyName: keyName, isMain: true)

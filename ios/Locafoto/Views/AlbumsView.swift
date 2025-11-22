@@ -495,7 +495,7 @@ struct AlbumDetailView: View {
             }
         }
         .sheet(isPresented: $showPINSetup) {
-            PINSetupView { pin in
+            PrivateAlbumPINSetupView { pin in
                 Task {
                     await togglePrivacy(pin: pin)
                 }

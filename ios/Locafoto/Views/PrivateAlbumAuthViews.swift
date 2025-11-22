@@ -1,8 +1,8 @@
 import SwiftUI
 
-// MARK: - PIN Setup View
+// MARK: - Private Album PIN Setup View
 
-struct PINSetupView: View {
+struct PrivateAlbumPINSetupView: View {
     @Environment(\.dismiss) var dismiss
     @State private var pin = ""
     @State private var confirmPin = ""
@@ -435,5 +435,5 @@ struct PrivateAlbumAuthSheet: View {
 }
 
 #Preview {
-    PINSetupView { _ in }
+    PrivateAlbumPINSetupView { _ in }
 }

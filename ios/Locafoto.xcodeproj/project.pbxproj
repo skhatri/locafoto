@@ -24,6 +24,9 @@
 		5E4378432ED185AE00C411EA /* AlbumViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E4378422ED185AE00C411EA /* AlbumViewModel.swift */; };
 		5E4378452ED185B500C411EA /* AlbumsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E4378442ED185B500C411EA /* AlbumsView.swift */; };
 		5E4378472ED1FEB900C411EA /* BiometricService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E4378462ED1FEB900C411EA /* BiometricService.swift */; };
+		5E4378492ED221CF00C411EA /* PrivateAlbumAuthViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E4378482ED221CF00C411EA /* PrivateAlbumAuthViews.swift */; };
+		5E43784C2ED221E600C411EA /* PrivateAlbumKeyService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E43784A2ED221E600C411EA /* PrivateAlbumKeyService.swift */; };
+		5E43784D2ED221E600C411EA /* PrivateAlbumPINService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E43784B2ED221E600C411EA /* PrivateAlbumPINService.swift */; };
 		5FF444E4A1558147330590F0 /* LFSImportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAB25DC76A3584DAD8695E6C /* LFSImportService.swift */; };
 		6CD73670D8AC0B9EA68B4B34 /* LFSLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEC1AA6831EFD39F431E88DD /* LFSLibraryView.swift */; };
 		8DC3E684AC931000B5CBB3E3 /* KeyManagementService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55D3A223DDE51A08C2B1B45F /* KeyManagementService.swift */; };
@@ -40,6 +43,7 @@
 		E7E7E217CF1365C5CBE57637 /* GalleryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 830424A9CC82BF7567F84EE2 /* GalleryViewModel.swift */; };
 		F3108C4B9E18A5FEB5394492 /* ImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A17BEBA2770E632ED8A207EE /* ImportView.swift */; };
 		F5AE3FF61BFE8955958CC2A4 /* PINSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8534FE1A1E900B69A613CD9C /* PINSetupView.swift */; };
+		F7B8C9D0E1F2A3B4C5D6E7F8 /* ToastView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C0D1E2F3A4B5C6D7E8F9A0B /* ToastView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -61,6 +65,9 @@
 		5E4378422ED185AE00C411EA /* AlbumViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlbumViewModel.swift; sourceTree = "<group>"; };
 		5E4378442ED185B500C411EA /* AlbumsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlbumsView.swift; sourceTree = "<group>"; };
 		5E4378462ED1FEB900C411EA /* BiometricService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BiometricService.swift; sourceTree = "<group>"; };
+		5E4378482ED221CF00C411EA /* PrivateAlbumAuthViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivateAlbumAuthViews.swift; sourceTree = "<group>"; };
+		5E43784A2ED221E600C411EA /* PrivateAlbumKeyService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivateAlbumKeyService.swift; sourceTree = "<group>"; };
+		5E43784B2ED221E600C411EA /* PrivateAlbumPINService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivateAlbumPINService.swift; sourceTree = "<group>"; };
 		6249E4A6E8D2FCA965E52BE2 /* EncryptionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EncryptionService.swift; sourceTree = "<group>"; };
 		6872FCB96BE94D959DA7E7F5 /* CameraViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraViewModel.swift; sourceTree = "<group>"; };
 		81B77F5B270FBFC9720C6C88 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -78,6 +85,7 @@
 		FA06E6851E41EDF17B5F10C8 /* StorageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageService.swift; sourceTree = "<group>"; };
 		FDAC2F91EC0BFE8FC3986896 /* CameraView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraView.swift; sourceTree = "<group>"; };
 		FEC1AA6831EFD39F431E88DD /* LFSLibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LFSLibraryView.swift; sourceTree = "<group>"; };
+		9C0D1E2F3A4B5C6D7E8F9A0B /* ToastView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToastView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -126,6 +134,8 @@
 		564EAF51B7DD4639ADD9B985 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				5E43784A2ED221E600C411EA /* PrivateAlbumKeyService.swift */,
+				5E43784B2ED221E600C411EA /* PrivateAlbumPINService.swift */,
 				5E4378462ED1FEB900C411EA /* BiometricService.swift */,
 				5E4378402ED185A800C411EA /* AlbumService.swift */,
 				F6DFA1235A1EE674FB2D608B /* CameraService.swift */,
@@ -161,6 +171,7 @@
 		C454586A1F4E28C340BDC1AD /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				5E4378482ED221CF00C411EA /* PrivateAlbumAuthViews.swift */,
 				5E4378442ED185B500C411EA /* AlbumsView.swift */,
 				FDAC2F91EC0BFE8FC3986896 /* CameraView.swift */,
 				379A554720FE930A1BB84D85 /* ContentView.swift */,
@@ -170,6 +181,7 @@
 				FEC1AA6831EFD39F431E88DD /* LFSLibraryView.swift */,
 				8534FE1A1E900B69A613CD9C /* PINSetupView.swift */,
 				81B77F5B270FBFC9720C6C88 /* SettingsView.swift */,
+				9C0D1E2F3A4B5C6D7E8F9A0B /* ToastView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -268,6 +280,7 @@
 			files = (
 				B53D6A4519D607019D85A584 /* LocafotoApp.swift in Sources */,
 				0A1B2C3D4E5F6A7B8C9D0E3F /* ColorTheme.swift in Sources */,
+				5E4378492ED221CF00C411EA /* PrivateAlbumAuthViews.swift in Sources */,
 				D303F800CF9B73A5E8D2125A /* LFSFile.swift in Sources */,
 				5E4378412ED185A800C411EA /* AlbumService.swift in Sources */,
 				20D11F43EC75D1131B6DF211 /* Photo.swift in Sources */,
@@ -283,6 +296,8 @@
 				A649C8EFCB689AA992E36953 /* StorageService.swift in Sources */,
 				5E4378452ED185B500C411EA /* AlbumsView.swift in Sources */,
 				1C207A747CDC8A06AE9D6970 /* CameraViewModel.swift in Sources */,
+				5E43784C2ED221E600C411EA /* PrivateAlbumKeyService.swift in Sources */,
+				5E43784D2ED221E600C411EA /* PrivateAlbumPINService.swift in Sources */,
 				E7E7E217CF1365C5CBE57637 /* GalleryViewModel.swift in Sources */,
 				AB7FCD046A256CCB9FFA11C0 /* ImportViewModel.swift in Sources */,
 				E531655180F7B1F73A3B0D4A /* KeyLibraryViewModel.swift in Sources */,
@@ -297,6 +312,7 @@
 				6CD73670D8AC0B9EA68B4B34 /* LFSLibraryView.swift in Sources */,
 				F5AE3FF61BFE8955958CC2A4 /* PINSetupView.swift in Sources */,
 				C76CF81ABFC3C37D56B7AAA1 /* SettingsView.swift in Sources */,
+				F7B8C9D0E1F2A3B4C5D6E7F8 /* ToastView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
