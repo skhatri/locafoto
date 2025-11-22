@@ -5,7 +5,7 @@ import UIKit
 /// Service for sharing encrypted photos via AirDrop
 actor SharingService {
     private let storageService = StorageService()
-    private let albumService = AlbumService()
+    private let albumService = AlbumService.shared
 
     // MARK: - Export for Sharing
 
@@ -96,13 +96,9 @@ actor SharingService {
         // Generate thumbnail
         let thumbnailData = try generateThumbnail(from: decryptedData)
 
-        // Encrypt the thumbnail with the same key/iv/tag
-        let encryptedThumbnail = try await encryptionService.encryptPhotoData(
-            thumbnailData,
-            encryptedKey: encryptedKey,
-            iv: iv,
-            authTag: authTag
-        )
+        // Encrypt thumbnail separately with master key (gets its own IV/authTag)
+        // This ensures thumbnail can be decrypted correctly
+        let encryptedThumbnail = try await encryptionService.encryptPhoto(thumbnailData)
 
         // Get main album for imported photos
         try await albumService.loadAlbums()
@@ -112,11 +108,17 @@ actor SharingService {
         }
 
         // Create photo object
+        // Main photo uses the encryption info from the .locaphoto bundle
+        // Thumbnail uses its own separate encryption info
         let photo = Photo(
             id: photoID,
-            encryptedKeyData: encryptedKey,
-            ivData: iv,
-            authTagData: authTag,
+            encryptedKeyData: encryptedKey, // Main photo encryption (from bundle)
+            ivData: iv, // Main photo IV (from bundle)
+            authTagData: authTag, // Main photo authTag (from bundle)
+            // Thumbnail encryption info (separate)
+            thumbnailEncryptedKeyData: encryptedThumbnail.encryptedKey,
+            thumbnailIvData: encryptedThumbnail.iv,
+            thumbnailAuthTagData: encryptedThumbnail.authTag,
             captureDate: ISO8601DateFormatter().date(from: bundle.metadata.captureDate) ?? Date(),
             importDate: Date(),
             modifiedDate: Date(),
@@ -134,7 +136,7 @@ actor SharingService {
         )
 
         // Save the encrypted photo with thumbnail
-        try await storageService.saveSharedPhoto(photo, encryptedData: photoData, thumbnail: encryptedThumbnail)
+        try await storageService.saveSharedPhoto(photo, encryptedData: photoData, thumbnail: encryptedThumbnail.encryptedData)
 
         // Clean up temp file
         try? FileManager.default.removeItem(at: url)

@@ -96,6 +96,10 @@ actor EncryptionService {
             encryptedKey: encryptedKey,
             iv: Data(nonce),
             authTag: tag,
+            // Thumbnail encryption info not set here (caller will set separately if needed)
+            thumbnailEncryptedKey: nil,
+            thumbnailIv: nil,
+            thumbnailAuthTag: nil,
             metadata: PhotoMetadata(
                 originalSize: photoData.count,
                 captureDate: Date(),

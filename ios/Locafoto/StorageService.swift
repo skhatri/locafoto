@@ -73,6 +73,10 @@ actor StorageService {
             encryptedKeyData: encryptedPhoto.encryptedKey,
             ivData: encryptedPhoto.iv,
             authTagData: encryptedPhoto.authTag,
+            // Store thumbnail encryption info if provided, otherwise nil (backward compatible)
+            thumbnailEncryptedKeyData: encryptedPhoto.thumbnailEncryptedKey,
+            thumbnailIvData: encryptedPhoto.thumbnailIv,
+            thumbnailAuthTagData: encryptedPhoto.thumbnailAuthTag,
             captureDate: encryptedPhoto.metadata.captureDate,
             importDate: Date(),
             modifiedDate: Date(),
@@ -203,8 +207,7 @@ actor PhotoStore {
         try saveMetadata()
 
         // Update album thumbnail
-        let albumService = AlbumService()
-        try? await albumService.loadAlbums()
+        let albumService = AlbumService.shared
         await albumService.updateAlbumThumbnails(albumId: photo.albumId)
     }
 
@@ -225,8 +228,7 @@ actor PhotoStore {
 
         // Update album thumbnail if we had an album
         if let albumId = albumId {
-            let albumService = AlbumService()
-            try? await albumService.loadAlbums()
+            let albumService = AlbumService.shared
             await albumService.updateAlbumThumbnails(albumId: albumId)
         }
     }
@@ -246,8 +248,7 @@ actor PhotoStore {
         try? saveMetadata()
 
         // Update thumbnails for both old and new albums
-        let albumService = AlbumService()
-        try? await albumService.loadAlbums()
+        let albumService = AlbumService.shared
         await albumService.updateAlbumThumbnails(albumIds: [oldAlbumId, albumId])
     }
 

@@ -5,7 +5,7 @@ import UIKit
 actor SeedDataService {
     private let encryptionService = EncryptionService()
     private let storageService = StorageService()
-    private let albumService = AlbumService()
+    private let albumService = AlbumService.shared
 
     /// Key for tracking if seed data has been loaded
     private static let seedDataLoadedKey = "com.locafoto.seedDataLoaded"
@@ -56,22 +56,37 @@ actor SeedDataService {
             return
         }
 
-        // Encrypt the photo
+        // Encrypt the photo with master key
         let encryptedPhoto = try await encryptionService.encryptPhoto(imageData)
 
         // Generate thumbnail
         let thumbnail = generateThumbnail(from: imageData) ?? imageData
 
-        // Encrypt thumbnail with the same key
-        let encryptedThumbnail = try await encryptionService.encryptPhotoData(
-            thumbnail,
-            encryptedKey: encryptedPhoto.encryptedKey,
-            iv: encryptedPhoto.iv,
-            authTag: encryptedPhoto.authTag
+        // Encrypt thumbnail separately with master key (gets its own IV/authTag)
+        let encryptedThumbnail = try await encryptionService.encryptPhoto(thumbnail)
+
+        // Create EncryptedPhoto with both sets of encryption info
+        let encryptedPhotoForStorage = EncryptedPhoto(
+            id: encryptedPhoto.id,
+            encryptedData: encryptedPhoto.encryptedData,
+            encryptedKey: encryptedPhoto.encryptedKey, // Main photo's key
+            iv: encryptedPhoto.iv, // Main photo's IV
+            authTag: encryptedPhoto.authTag, // Main photo's authTag
+            // Thumbnail encryption info (separate)
+            thumbnailEncryptedKey: encryptedThumbnail.encryptedKey,
+            thumbnailIv: encryptedThumbnail.iv,
+            thumbnailAuthTag: encryptedThumbnail.authTag,
+            metadata: PhotoMetadata(
+                originalSize: imageData.count,
+                captureDate: Date(),
+                width: nil,
+                height: nil,
+                format: "SEED"
+            )
         )
 
         // Save to storage
-        try await storageService.savePhoto(encryptedPhoto, thumbnail: encryptedThumbnail, albumId: mainAlbum.id)
+        try await storageService.savePhoto(encryptedPhotoForStorage, thumbnail: encryptedThumbnail.encryptedData, albumId: mainAlbum.id)
 
         print("✅ Loaded seed image: \(name)")
     }

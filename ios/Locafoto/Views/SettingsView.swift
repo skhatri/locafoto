@@ -42,6 +42,7 @@ struct SettingsView: View {
     @AppStorage("preserveMetadata") private var preserveMetadata = true
     @AppStorage("generateThumbnails") private var generateThumbnails = true
     @AppStorage("thumbnailStyle") private var thumbnailStyleRaw = ThumbnailStyle.blurred.rawValue
+    @AppStorage("allowDeleteNonEmptyAlbums") private var allowDeleteNonEmptyAlbums = false
     @State private var photoAccessStatus: String = "Unknown"
     @State private var receivedFiles: [ReceivedFileInfo] = []
     @State private var orphanedPhotos: [OrphanedPhotoInfo] = []
@@ -149,6 +150,14 @@ struct SettingsView: View {
                     Toggle("Generate Thumbnails", isOn: $generateThumbnails)
 
                     Text("Create smaller thumbnails for faster gallery browsing")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+
+                Section(header: Text("Albums")) {
+                    Toggle("Allow Deleting Non-Empty Albums", isOn: $allowDeleteNonEmptyAlbums)
+
+                    Text("When enabled, you can delete albums that contain photos. Photos will also be deleted.")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }

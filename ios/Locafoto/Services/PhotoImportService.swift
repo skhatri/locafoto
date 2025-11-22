@@ -45,14 +45,20 @@ actor PhotoImportService {
         let encryptedThumbnail = try await encryptionService.encryptPhoto(thumbnailData)
 
         // Create encrypted photo structure
-        // Store thumbnail encryption info (master key based) in the Photo metadata
-        // Full image decryption uses LFS key looked up via tracking service
+        // Main photo is encrypted with LFS key (tracked separately via LFSFileTrackingService)
+        // Thumbnail is encrypted with master key - store thumbnail encryption info separately
+        // For backward compatibility, also store thumbnail encryption in main fields
+        // (since main photo decryption uses LFS key lookup, not Photo model fields)
         let encryptedPhoto = EncryptedPhoto(
             id: photoId,
             encryptedData: sealedBox.ciphertext,
-            encryptedKey: encryptedThumbnail.encryptedKey, // For thumbnail decryption
-            iv: encryptedThumbnail.iv, // For thumbnail decryption
-            authTag: encryptedThumbnail.authTag, // For thumbnail decryption
+            encryptedKey: encryptedThumbnail.encryptedKey, // Thumbnail key (for backward compat)
+            iv: encryptedThumbnail.iv, // Thumbnail IV (for backward compat)
+            authTag: encryptedThumbnail.authTag, // Thumbnail authTag (for backward compat)
+            // Store thumbnail encryption info separately
+            thumbnailEncryptedKey: encryptedThumbnail.encryptedKey,
+            thumbnailIv: encryptedThumbnail.iv,
+            thumbnailAuthTag: encryptedThumbnail.authTag,
             metadata: PhotoMetadata(
                 originalSize: photoData.count,
                 captureDate: Date(),
@@ -100,12 +106,20 @@ actor PhotoImportService {
         let encryptedThumbnail = try await encryptionService.encryptPhoto(thumbnailData)
 
         // Create encrypted photo structure
+        // Main video is encrypted with LFS key (tracked separately via LFSFileTrackingService)
+        // Thumbnail is encrypted with master key - store thumbnail encryption info separately
+        // For backward compatibility, also store thumbnail encryption in main fields
+        // (since main video decryption uses LFS key lookup, not Photo model fields)
         let encryptedPhoto = EncryptedPhoto(
             id: photoId,
             encryptedData: sealedBox.ciphertext,
-            encryptedKey: encryptedThumbnail.encryptedKey,
-            iv: encryptedThumbnail.iv,
-            authTag: encryptedThumbnail.authTag,
+            encryptedKey: encryptedThumbnail.encryptedKey, // Thumbnail key (for backward compat)
+            iv: encryptedThumbnail.iv, // Thumbnail IV (for backward compat)
+            authTag: encryptedThumbnail.authTag, // Thumbnail authTag (for backward compat)
+            // Store thumbnail encryption info separately
+            thumbnailEncryptedKey: encryptedThumbnail.encryptedKey,
+            thumbnailIv: encryptedThumbnail.iv,
+            thumbnailAuthTag: encryptedThumbnail.authTag,
             metadata: PhotoMetadata(
                 originalSize: videoData.count,
                 captureDate: Date(),

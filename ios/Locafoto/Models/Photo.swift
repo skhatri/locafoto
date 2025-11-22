@@ -4,10 +4,16 @@ import Foundation
 struct Photo: Identifiable, Codable {
     let id: UUID
 
-    // Encryption data
+    // Encryption data (for main photo)
     var encryptedKeyData: Data
     var ivData: Data
     var authTagData: Data
+
+    // Thumbnail encryption data (optional for backward compatibility)
+    // If nil, thumbnail uses main photo encryption info
+    var thumbnailEncryptedKeyData: Data?
+    var thumbnailIvData: Data?
+    var thumbnailAuthTagData: Data?
 
     // Timestamps
     var captureDate: Date
@@ -41,6 +47,12 @@ struct EncryptedPhoto {
     let encryptedKey: Data
     let iv: Data
     let authTag: Data
+    
+    // Thumbnail encryption info (optional - if nil, thumbnail uses main photo encryption)
+    let thumbnailEncryptedKey: Data?
+    let thumbnailIv: Data?
+    let thumbnailAuthTag: Data?
+    
     let metadata: PhotoMetadata
 }
 

@@ -2,8 +2,12 @@ import Foundation
 
 /// Service for managing albums
 actor AlbumService {
+    static let shared = AlbumService()
+
     private let fileManager = FileManager.default
     private var albums: [Album] = []
+
+    private init() {}
 
     /// Get the albums file URL
     private var albumsURL: URL {
@@ -67,6 +71,9 @@ actor AlbumService {
 
     /// Create a new album
     func createAlbum(name: String, keyName: String, isMain: Bool = false) throws -> Album {
+        // Load existing albums first to avoid overwriting
+        try loadAlbums()
+
         let album = Album(name: name, keyName: keyName, isMain: isMain)
         albums.append(album)
         albums.sort { $0.modifiedDate > $1.modifiedDate }
@@ -76,6 +83,9 @@ actor AlbumService {
 
     /// Update album
     func updateAlbum(_ album: Album) throws {
+        // Load existing albums first
+        try loadAlbums()
+
         guard let index = albums.firstIndex(where: { $0.id == album.id }) else {
             throw AlbumError.albumNotFound
         }
@@ -87,18 +97,23 @@ actor AlbumService {
         try saveAlbums()
     }
 
-    /// Delete album (cannot delete main album)
+    /// Delete album
     func deleteAlbum(_ id: UUID) throws {
-        guard let album = albums.first(where: { $0.id == id }) else {
-            throw AlbumError.albumNotFound
-        }
+        // Load existing albums first
+        try loadAlbums()
 
-        if album.isMain {
-            throw AlbumError.cannotDeleteMainAlbum
+        guard albums.contains(where: { $0.id == id }) else {
+            throw AlbumError.albumNotFound
         }
 
         albums.removeAll { $0.id == id }
         try saveAlbums()
+    }
+
+    /// Get default album for saving (first available album)
+    func getDefaultAlbum() -> Album? {
+        // Prefer album marked as main, otherwise return first album
+        return albums.first { $0.isMain } ?? albums.first
     }
 
     /// Check if main album exists
@@ -108,6 +123,9 @@ actor AlbumService {
 
     /// Update album thumbnail cache based on current photos
     func updateAlbumThumbnails(albumId: UUID) async {
+        // Load existing albums first
+        try? loadAlbums()
+
         guard let index = albums.firstIndex(where: { $0.id == albumId }) else {
             return
         }
@@ -152,14 +170,14 @@ actor AlbumService {
 
 enum AlbumError: LocalizedError {
     case albumNotFound
-    case cannotDeleteMainAlbum
+    case noAlbumAvailable
 
     var errorDescription: String? {
         switch self {
         case .albumNotFound:
             return "Album not found"
-        case .cannotDeleteMainAlbum:
-            return "Cannot delete the main album"
+        case .noAlbumAvailable:
+            return "No album available. Please create an album first."
         }
     }
 }

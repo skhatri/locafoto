@@ -26,7 +26,7 @@ class CameraViewModel: NSObject, ObservableObject {
     private var storageService = StorageService()
     private var keyManagementService = KeyManagementService()
     private var trackingService = LFSFileTrackingService()
-    private var albumService = AlbumService()
+    private var albumService = AlbumService.shared
 
     /// Check camera permissions
     func checkPermissions() async {
@@ -173,13 +173,21 @@ class CameraViewModel: NSObject, ObservableObject {
             let encryptionService = EncryptionService()
             let encryptedThumbnail = try await encryptionService.encryptPhoto(thumbnailData)
 
-            // Create encrypted photo structure with thumbnail encryption info
+            // Create encrypted photo structure
+            // Main photo is encrypted with LFS key (tracked separately via LFSFileTrackingService)
+            // Thumbnail is encrypted with master key - store thumbnail encryption info separately
+            // For backward compatibility, also store thumbnail encryption in main fields
+            // (since main photo decryption uses LFS key lookup, not Photo model fields)
             let encryptedPhoto = EncryptedPhoto(
                 id: photoId,
                 encryptedData: sealedBox.ciphertext,
-                encryptedKey: encryptedThumbnail.encryptedKey, // For thumbnail decryption
-                iv: encryptedThumbnail.iv, // For thumbnail decryption
-                authTag: encryptedThumbnail.authTag, // For thumbnail decryption
+                encryptedKey: encryptedThumbnail.encryptedKey, // Thumbnail key (for backward compat)
+                iv: encryptedThumbnail.iv, // Thumbnail IV (for backward compat)
+                authTag: encryptedThumbnail.authTag, // Thumbnail authTag (for backward compat)
+                // Store thumbnail encryption info separately
+                thumbnailEncryptedKey: encryptedThumbnail.encryptedKey,
+                thumbnailIv: encryptedThumbnail.iv,
+                thumbnailAuthTag: encryptedThumbnail.authTag,
                 metadata: PhotoMetadata(
                     originalSize: photoData.count,
                     captureDate: Date(),

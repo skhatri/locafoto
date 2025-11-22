@@ -19,7 +19,7 @@ class ImportViewModel: ObservableObject {
 
     private let importService = PhotoImportService()
     private let keyManagementService = KeyManagementService()
-    private let albumService = AlbumService()
+    private let albumService = AlbumService.shared
 
     // Temporary storage for selected photos
     var pendingResults: [PHPickerResult] = []

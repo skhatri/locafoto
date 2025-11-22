@@ -6,7 +6,7 @@ class AlbumViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var availableKeys: [KeyFile] = []
 
-    private let albumService = AlbumService()
+    private let albumService = AlbumService.shared
     private let keyManagementService = KeyManagementService()
 
     /// Load all albums

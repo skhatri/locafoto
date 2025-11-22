@@ -136,7 +136,6 @@
 				9ABC1545DEA6A8B699F0B524 /* PhotoImportService.swift */,
 				1A2B3C4D5E6F7A8B9C0D1E2F /* SeedDataService.swift */,
 				33C9B0AEE17C4BED043CEEAF /* SharingService.swift */,
-				FA06E6851E41EDF17B5F10C8 /* StorageService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -182,6 +181,7 @@
 				C454586A1F4E28C340BDC1AD /* Views */,
 				420CEB417186B52ECF642348 /* ViewModels */,
 				564EAF51B7DD4639ADD9B985 /* Services */,
+				FA06E6851E41EDF17B5F10C8 /* StorageService.swift */,
 				9CF43B31E8845D861542A38E /* Models */,
 				45B877375D6D6297BAAF2860 /* Resources */,
 			);

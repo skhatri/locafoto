@@ -7,7 +7,7 @@ actor LFSImportService {
     private let keyManagementService = KeyManagementService()
     private let storageService = StorageService()
     private let trackingService = LFSFileTrackingService()
-    private let albumService = AlbumService()
+    private let albumService = AlbumService.shared
 
     /// Handle incoming .lfs file from AirDrop
     func handleIncomingLFSFile(from url: URL, pin: String) async throws -> Photo {
@@ -50,7 +50,7 @@ actor LFSImportService {
         let albumId = targetAlbum.id
         print("📁 Saving .lfs file to album: '\(targetAlbum.name)' (main: \(targetAlbum.isMain))")
 
-        // Decrypt the file
+        // Decrypt the file temporarily to validate and generate thumbnail
         let nonce = try AES.GCM.Nonce(data: lfsFile.nonce)
         let sealedBox = try AES.GCM.SealedBox(
             nonce: nonce,
@@ -86,47 +86,58 @@ actor LFSImportService {
         // Generate thumbnail
         let thumbnailData = try generateThumbnail(from: decryptedData)
 
-        // Now re-encrypt with our own encryption system for storage
+        // CRITICAL: Main photo stays encrypted with LFS key (store original encrypted data)
+        // Only thumbnail gets encrypted with master key for fast gallery loading
         let encryptionService = EncryptionService()
-        let encryptedPhoto = try await encryptionService.encryptPhoto(decryptedData)
-        let encryptedThumbnail = try await encryptionService.encryptPhotoData(
-            thumbnailData,
-            encryptedKey: encryptedPhoto.encryptedKey,
-            iv: encryptedPhoto.iv,
-            authTag: encryptedPhoto.authTag
+        
+        // Encrypt thumbnail with master key for fast gallery loading
+        let encryptedThumbnail = try await encryptionService.encryptPhoto(thumbnailData)
+        
+        // Create photo ID
+        let photoId = UUID()
+        
+        // Create encrypted photo structure
+        // Main photo: Stored AS-IS from LFS file (still encrypted with LFS key)
+        // Thumbnail: Encrypted with master key - store thumbnail encryption info
+        // Main photo encryption info is tracked separately via LFSFileTrackingService
+        let encryptedPhotoForStorage = EncryptedPhoto(
+            id: photoId,
+            encryptedData: lfsFile.encryptedData, // Store original LFS-encrypted data (LFS key)
+            encryptedKey: encryptedThumbnail.encryptedKey, // Thumbnail key (for backward compat)
+            iv: encryptedThumbnail.iv, // Thumbnail IV (for backward compat)
+            authTag: encryptedThumbnail.authTag, // Thumbnail authTag (for backward compat)
+            // Thumbnail encryption info (separate)
+            thumbnailEncryptedKey: encryptedThumbnail.encryptedKey,
+            thumbnailIv: encryptedThumbnail.iv,
+            thumbnailAuthTag: encryptedThumbnail.authTag,
+            metadata: PhotoMetadata(
+                originalSize: decryptedData.count,
+                captureDate: Date(),
+                width: Int(image.size.width),
+                height: Int(image.size.height),
+                format: "LFS"
+            )
         )
 
-        // Save to storage
-        try await storageService.savePhoto(encryptedPhoto, thumbnail: encryptedThumbnail, albumId: albumId)
+        // Save to storage - savePhoto will create the Photo object
+        try await storageService.savePhoto(encryptedPhotoForStorage, thumbnail: encryptedThumbnail.encryptedData, albumId: albumId)
 
-        // Create Photo object
-        let photo = Photo(
-            id: encryptedPhoto.id,
-            encryptedKeyData: encryptedPhoto.encryptedKey,
-            ivData: encryptedPhoto.iv,
-            authTagData: encryptedPhoto.authTag,
-            captureDate: Date(),
-            importDate: Date(),
-            modifiedDate: Date(),
-            originalSize: Int64(decryptedData.count),
-            encryptedSize: Int64(encryptedPhoto.encryptedData.count),
-            width: Int32(image.size.width),
-            height: Int32(image.size.height),
-            format: "LFS",
-            filePath: "",
-            thumbnailPath: nil,
-            albumId: albumId,
-            tags: ["lfs", "imported"],
-            isFavorite: false,
-            isHidden: false
-        )
+        // Load the Photo object that was created by savePhoto
+        let photo = await PhotoStore.shared.get(encryptedPhotoForStorage.id)
+        
+        guard let photo = photo else {
+            throw LFSError.importFailed("Photo was saved but could not be retrieved")
+        }
 
-        // Track this import for key usage statistics
-        try await trackingService.trackImport(
+        // Track this import with LFS key encryption info (IV and authTag from LFS file)
+        // This allows decryption of the main photo using LFS key
+        try await trackingService.trackImportWithCrypto(
             photoId: photo.id,
             keyName: lfsFile.keyName,
             originalFilename: originalFilename,
-            fileSize: Int64(fileData.count)
+            fileSize: Int64(fileData.count),
+            iv: lfsFile.nonce, // IV from LFS file
+            authTag: lfsFile.tag // AuthTag from LFS file
         )
 
         // Clean up temp file

@@ -1,10 +1,13 @@
 import SwiftUI
 import Foundation
+import CryptoKit
 
 struct GalleryView: View {
     @StateObject private var viewModel = GalleryViewModel()
+    @StateObject private var albumViewModel = AlbumViewModel()
     @EnvironmentObject var appState: AppState
     @State private var albums: [Album] = []
+    @State private var showCreateAlbum = false
 
     let columns = [
         GridItem(.adaptive(minimum: 100), spacing: 2)
@@ -14,7 +17,7 @@ struct GalleryView: View {
         GridItem(.adaptive(minimum: 80), spacing: 12)
     ]
 
-    private let albumService = AlbumService()
+    private let albumService = AlbumService.shared
 
     var body: some View {
         NavigationView {
@@ -25,56 +28,114 @@ struct GalleryView: View {
 
                 Group {
                     if viewModel.photos.isEmpty {
-                        VStack(spacing: 30) {
-                            ZStack {
-                                // Outer glow ring
-                                Circle()
-                                    .stroke(
-                                        LinearGradient(
-                                            colors: [Color.locafotoNeon, Color.locafotoPrimary],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        ),
-                                        lineWidth: 4
-                                    )
-                                    .frame(width: 140, height: 140)
-                                    .blur(radius: 10)
+                        ScrollView {
+                            VStack(spacing: 20) {
+                                // Albums section even when no photos
+                                VStack(alignment: .leading, spacing: 12) {
+                                    HStack {
+                                        Text("Albums")
+                                            .font(.system(size: 20, weight: .bold, design: .rounded))
+                                        Spacer()
 
-                                // Main circle with gradient
-                                Circle()
-                                    .fill(
-                                        LinearGradient(
-                                            colors: [Color.locafotoPrimary, Color.locafotoAccent],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        )
-                                    )
-                                    .frame(width: 120, height: 120)
-                                    .neonGlow(color: .locafotoPrimary, radius: 15)
+                                        Button(action: { showCreateAlbum = true }) {
+                                            Image(systemName: "plus")
+                                                .font(.system(size: 14, weight: .semibold))
+                                                .foregroundColor(.locafotoPrimary)
+                                        }
+                                        .padding(.trailing, 8)
 
-                                Image(systemName: "photo.on.rectangle.angled")
-                                    .font(.system(size: 50, weight: .bold))
-                                    .foregroundColor(.white)
-                            }
-                            .floating()
-
-                            VStack(spacing: 10) {
-                                Text("No Photos Yet")
-                                    .font(.system(size: 28, weight: .bold, design: .rounded))
-                                    .foregroundColor(.primary)
-
-                                Text("Let's make some memories! ✨")
-                                    .font(.system(size: 16, weight: .medium, design: .rounded))
-                                    .foregroundColor(.locafotoPrimary)
-
-                                Text("Tap Camera to capture or Import from your library")
-                                    .font(.system(size: 14, design: .rounded))
-                                    .foregroundColor(.secondary)
-                                    .multilineTextAlignment(.center)
+                                        if !albums.isEmpty {
+                                            NavigationLink(destination: AlbumsListView(albums: albums)) {
+                                                Text("See All")
+                                                    .font(.subheadline)
+                                                    .foregroundColor(.locafotoPrimary)
+                                            }
+                                        }
+                                    }
                                     .padding(.horizontal)
+
+                                    if albums.isEmpty {
+                                        HStack {
+                                            Spacer()
+                                            VStack(spacing: 8) {
+                                                Image(systemName: "rectangle.stack")
+                                                    .font(.system(size: 24))
+                                                    .foregroundColor(.secondary)
+                                                Text("No albums yet")
+                                                    .font(.caption)
+                                                    .foregroundColor(.secondary)
+                                            }
+                                            .padding(.vertical, 20)
+                                            Spacer()
+                                        }
+                                    } else {
+                                        ScrollView(.horizontal, showsIndicators: false) {
+                                            HStack(spacing: 12) {
+                                                ForEach(albums) { album in
+                                                    NavigationLink(destination: AlbumDetailView(album: album)) {
+                                                        MiniAlbumCard(album: album)
+                                                    }
+                                                }
+                                            }
+                                            .padding(.horizontal)
+                                        }
+                                    }
+                                }
+                                .padding(.top, 10)
+
+                                // No photos message
+                                VStack(spacing: 30) {
+                                    ZStack {
+                                        // Outer glow ring
+                                        Circle()
+                                            .stroke(
+                                                LinearGradient(
+                                                    colors: [Color.locafotoNeon, Color.locafotoPrimary],
+                                                    startPoint: .topLeading,
+                                                    endPoint: .bottomTrailing
+                                                ),
+                                                lineWidth: 4
+                                            )
+                                            .frame(width: 140, height: 140)
+                                            .blur(radius: 10)
+
+                                        // Main circle with gradient
+                                        Circle()
+                                            .fill(
+                                                LinearGradient(
+                                                    colors: [Color.locafotoPrimary, Color.locafotoAccent],
+                                                    startPoint: .topLeading,
+                                                    endPoint: .bottomTrailing
+                                                )
+                                            )
+                                            .frame(width: 120, height: 120)
+                                            .neonGlow(color: .locafotoPrimary, radius: 15)
+
+                                        Image(systemName: "photo.on.rectangle.angled")
+                                            .font(.system(size: 50, weight: .bold))
+                                            .foregroundColor(.white)
+                                    }
+                                    .floating()
+
+                                    VStack(spacing: 10) {
+                                        Text("No Photos Yet")
+                                            .font(.system(size: 28, weight: .bold, design: .rounded))
+                                            .foregroundColor(.primary)
+
+                                        Text("Let's make some memories!")
+                                            .font(.system(size: 16, weight: .medium, design: .rounded))
+                                            .foregroundColor(.locafotoPrimary)
+
+                                        Text("Tap Camera to capture or Import from your library")
+                                            .font(.system(size: 14, design: .rounded))
+                                            .foregroundColor(.secondary)
+                                            .multilineTextAlignment(.center)
+                                            .padding(.horizontal)
+                                    }
+                                }
+                                .padding()
                             }
                         }
-                        .padding()
                     } else {
                         ScrollView {
                             VStack(spacing: 20) {
@@ -85,6 +146,14 @@ struct GalleryView: View {
                                             Text("Albums")
                                                 .font(.system(size: 20, weight: .bold, design: .rounded))
                                             Spacer()
+
+                                            Button(action: { showCreateAlbum = true }) {
+                                                Image(systemName: "plus")
+                                                    .font(.system(size: 14, weight: .semibold))
+                                                    .foregroundColor(.locafotoPrimary)
+                                            }
+                                            .padding(.trailing, 8)
+
                                             NavigationLink(destination: AlbumsListView(albums: albums)) {
                                                 Text("See All")
                                                     .font(.subheadline)
@@ -173,7 +242,16 @@ struct GalleryView: View {
                 Task {
                     await viewModel.loadPhotos()
                     await loadAlbums()
+                    await albumViewModel.loadKeys()
                 }
+            }
+            .sheet(isPresented: $showCreateAlbum) {
+                CreateAlbumSheet(viewModel: albumViewModel)
+                    .onDisappear {
+                        Task {
+                            await loadAlbums()
+                        }
+                    }
             }
             .onChange(of: appState.shouldRefreshGallery) { shouldRefresh in
                 if shouldRefresh {
@@ -277,6 +355,14 @@ struct MiniAlbumCard: View {
 struct AlbumsListView: View {
     let albums: [Album]
 
+    @AppStorage("allowDeleteNonEmptyAlbums") private var allowDeleteNonEmptyAlbums = false
+    @EnvironmentObject var appState: AppState
+    @State private var albumToDelete: Album?
+    @State private var showDeleteConfirmation = false
+    @State private var localAlbums: [Album] = []
+
+    private let albumService = AlbumService.shared
+
     let columns = [
         GridItem(.adaptive(minimum: 150), spacing: 16)
     ]
@@ -284,15 +370,89 @@ struct AlbumsListView: View {
     var body: some View {
         ScrollView {
             LazyVGrid(columns: columns, spacing: 16) {
-                ForEach(albums) { album in
+                ForEach(localAlbums) { album in
                     NavigationLink(destination: AlbumDetailView(album: album)) {
                         AlbumCardView(album: album)
+                    }
+                    .contextMenu {
+                        // Always show delete option, but only allow if album is empty OR setting allows
+                        if album.photoCount == 0 || allowDeleteNonEmptyAlbums {
+                            Button(role: .destructive) {
+                                albumToDelete = album
+                                showDeleteConfirmation = true
+                            } label: {
+                                Label("Delete Album", systemImage: "trash")
+                            }
+                        } else {
+                            // Album has photos and setting is disabled - show disabled state
+                            Text("Album has \(album.photoCount) photos")
+                            Text("Enable 'Delete Non-Empty Albums' in Settings to delete")
+                                .font(.caption)
+                        }
                     }
                 }
             }
             .padding()
         }
         .navigationTitle("Albums")
+        .onAppear {
+            // Load fresh data from disk
+            Task {
+                try? await albumService.loadAlbums()
+                let freshAlbums = await albumService.getAllAlbums()
+                await MainActor.run {
+                    localAlbums = freshAlbums
+                }
+            }
+        }
+        .alert("Delete Album", isPresented: $showDeleteConfirmation) {
+            Button("Cancel", role: .cancel) {
+                albumToDelete = nil
+            }
+            Button("Delete", role: .destructive) {
+                if let album = albumToDelete {
+                    Task {
+                        await deleteAlbum(album)
+                    }
+                }
+            }
+        } message: {
+            if let album = albumToDelete {
+                if album.photoCount > 0 {
+                    Text("This will permanently delete the album '\(album.name)' and all \(album.photoCount) photos in it. This cannot be undone.")
+                } else {
+                    Text("This will permanently delete the album '\(album.name)'. This cannot be undone.")
+                }
+            }
+        }
+    }
+
+    private func deleteAlbum(_ album: Album) async {
+        do {
+            // Delete all photos in the album first
+            if album.photoCount > 0 {
+                let photos = await PhotoStore.shared.getPhotos(forAlbum: album.id)
+                let storageService = StorageService()
+                let trackingService = LFSFileTrackingService()
+
+                for photo in photos {
+                    try? await trackingService.deleteTracking(byPhotoId: photo.id)
+                    try? await storageService.deletePhoto(photo.id)
+                }
+            }
+
+            // Delete the album
+            try await albumService.deleteAlbum(album.id)
+
+            // Update local state
+            await MainActor.run {
+                localAlbums.removeAll { $0.id == album.id }
+                albumToDelete = nil
+                appState.shouldRefreshGallery = true
+            }
+        } catch {
+            print("Failed to delete album: \(error)")
+        }
     }
 }
 
@@ -344,12 +504,17 @@ struct PhotoThumbnailView: View {
 
                 let imageData = try await storageService.loadThumbnail(for: photo.id)
 
-                // Decrypt thumbnail with master key (stored in photo metadata)
+                // Decrypt thumbnail using thumbnail-specific encryption info if available
+                // Fallback to main photo encryption info for backward compatibility (old photos)
+                let thumbnailKey = photo.thumbnailEncryptedKeyData ?? photo.encryptedKeyData
+                let thumbnailIv = photo.thumbnailIvData ?? photo.ivData
+                let thumbnailAuthTag = photo.thumbnailAuthTagData ?? photo.authTagData
+                
                 let decryptedData = try await encryptionService.decryptPhotoData(
                     imageData,
-                    encryptedKey: photo.encryptedKeyData,
-                    iv: photo.ivData,
-                    authTag: photo.authTagData
+                    encryptedKey: thumbnailKey,
+                    iv: thumbnailIv,
+                    authTag: thumbnailAuthTag
                 )
 
                 await MainActor.run {
@@ -563,16 +728,41 @@ struct PhotoDetailView: View {
             do {
                 let storageService = StorageService()
                 let encryptionService = EncryptionService()
+                let trackingService = LFSFileTrackingService()
+                let keyManagementService = KeyManagementService()
 
                 let imageData = try await storageService.loadPhoto(for: photo.id)
 
-                // Decrypt with master key (same as thumbnails)
-                let decryptedData = try await encryptionService.decryptPhotoData(
-                    imageData,
-                    encryptedKey: photo.encryptedKeyData,
-                    iv: photo.ivData,
-                    authTag: photo.authTagData
-                )
+                // Check if this photo is encrypted with LFS key (has tracking info)
+                let trackingInfo = try? await trackingService.getTrackingInfo(forPhotoId: photo.id)
+                
+                let decryptedData: Data
+                
+                if let tracking = trackingInfo, let pin = appState.currentPin {
+                    // Photo is encrypted with LFS key - decrypt using LFS key
+                    print("🔓 Decrypting photo with LFS key: \(tracking.keyName)")
+                    
+                    // Get the LFS encryption key
+                    let lfsKey = try await keyManagementService.getKey(byName: tracking.keyName, pin: pin)
+                    
+                    // Use IV and authTag from tracking if available, otherwise from Photo model
+                    let iv = tracking.iv ?? photo.ivData
+                    let authTag = tracking.authTag ?? photo.authTagData
+                    
+                    // Decrypt with LFS key directly (not master key)
+                    let nonce = try AES.GCM.Nonce(data: iv)
+                    let sealedBox = try AES.GCM.SealedBox(nonce: nonce, ciphertext: imageData, tag: authTag)
+                    decryptedData = try AES.GCM.open(sealedBox, using: lfsKey)
+                } else {
+                    // Photo is encrypted with master key - decrypt using Photo model encryption info
+                    print("🔓 Decrypting photo with master key")
+                    decryptedData = try await encryptionService.decryptPhotoData(
+                        imageData,
+                        encryptedKey: photo.encryptedKeyData,
+                        iv: photo.ivData,
+                        authTag: photo.authTagData
+                    )
+                }
 
                 // Validate image data
                 guard let image = UIImage(data: decryptedData) else {
@@ -743,7 +933,7 @@ struct AddToAlbumSheet: View {
     @State private var errorMessage: String?
     @State private var showError = false
 
-    private let albumService = AlbumService()
+    private let albumService = AlbumService.shared
 
     var body: some View {
         NavigationView {

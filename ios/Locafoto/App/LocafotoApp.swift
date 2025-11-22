@@ -667,7 +667,7 @@ class AppState: ObservableObject {
     var currentPin: String?
 
     private let keyManagementService = KeyManagementService()
-    private let albumService = AlbumService()
+    private let albumService = AlbumService.shared
     private let seedDataService = SeedDataService()
     let biometricService = BiometricService()
 
