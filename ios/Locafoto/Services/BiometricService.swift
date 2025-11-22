@@ -1,7 +1,10 @@
 import LocalAuthentication
+import Security
 
 /// Service for handling biometric authentication (Face ID/Touch ID)
 class BiometricService {
+
+    private static let keychainService = "com.locafoto.privatealbum"
 
     enum BiometricType {
         case none
@@ -134,5 +137,94 @@ class BiometricService {
         case .none:
             return "Biometrics"
         }
+    }
+
+    // MARK: - Keychain with Biometric Protection
+
+    /// Save data to keychain with biometric protection (requires Face ID to access)
+    func saveWithBiometricProtection(data: Data, forKey key: String) throws {
+        // Create access control with biometric protection
+        var error: Unmanaged<CFError>?
+        guard let access = SecAccessControlCreateWithFlags(
+            kCFAllocatorDefault,
+            kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
+            .biometryCurrentSet,
+            &error
+        ) else {
+            throw BiometricError.notAvailable
+        }
+
+        // Delete existing item first
+        let deleteQuery: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: Self.keychainService,
+            kSecAttrAccount as String: key
+        ]
+        SecItemDelete(deleteQuery as CFDictionary)
+
+        // Add new item with biometric protection
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: Self.keychainService,
+            kSecAttrAccount as String: key,
+            kSecAttrAccessControl as String: access,
+            kSecValueData as String: data
+        ]
+
+        let status = SecItemAdd(query as CFDictionary, nil)
+
+        guard status == errSecSuccess else {
+            throw BiometricError.authenticationFailed
+        }
+    }
+
+    /// Load data from keychain that requires biometric authentication
+    func loadWithBiometricProtection(forKey key: String, reason: String) async throws -> Data {
+        let context = LAContext()
+        context.localizedReason = reason
+
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: Self.keychainService,
+            kSecAttrAccount as String: key,
+            kSecReturnData as String: true,
+            kSecUseAuthenticationContext as String: context
+        ]
+
+        var result: AnyObject?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+
+        guard status == errSecSuccess, let data = result as? Data else {
+            if status == errSecItemNotFound {
+                throw BiometricError.authenticationFailed
+            }
+            throw BiometricError.authenticationFailed
+        }
+
+        return data
+    }
+
+    /// Delete biometric-protected data from keychain
+    func deleteWithBiometricProtection(forKey key: String) {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: Self.keychainService,
+            kSecAttrAccount as String: key
+        ]
+
+        SecItemDelete(query as CFDictionary)
+    }
+
+    /// Check if biometric-protected data exists for key
+    func hasProtectedData(forKey key: String) -> Bool {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: Self.keychainService,
+            kSecAttrAccount as String: key,
+            kSecReturnData as String: false
+        ]
+
+        let status = SecItemCopyMatching(query as CFDictionary, nil)
+        return status == errSecSuccess
     }
 }

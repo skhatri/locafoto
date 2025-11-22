@@ -112,7 +112,17 @@ struct AlbumCardView: View {
                     RoundedRectangle(cornerRadius: 12)
                         .fill(Color(.secondarySystemBackground))
 
-                    if album.photoCount == 0 {
+                    if album.isPrivate {
+                        // Private album - show lock icon instead of thumbnail
+                        VStack(spacing: 8) {
+                            Image(systemName: "lock.fill")
+                                .font(.system(size: 36))
+                                .foregroundColor(.locafotoPrimary)
+                            Text("Private")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    } else if album.photoCount == 0 {
                         // Empty album
                         Image(systemName: "rectangle.stack.fill")
                             .font(.system(size: 40))
@@ -154,7 +164,7 @@ struct AlbumCardView: View {
             .aspectRatio(1, contentMode: .fit)
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.locafotoPrimary.opacity(0.2), lineWidth: 1)
+                    .stroke(album.isPrivate ? Color.locafotoPrimary.opacity(0.5) : Color.locafotoPrimary.opacity(0.2), lineWidth: album.isPrivate ? 2 : 1)
             )
             .shadow(color: .locafotoPrimary.opacity(0.1), radius: 5)
             .clipped()
@@ -171,6 +181,12 @@ struct AlbumCardView: View {
                         Image(systemName: "star.fill")
                             .font(.caption2)
                             .foregroundColor(.yellow)
+                    }
+
+                    if album.isPrivate {
+                        Image(systemName: "eye.slash.fill")
+                            .font(.caption2)
+                            .foregroundColor(.locafotoPrimary)
                     }
                 }
 
@@ -189,7 +205,10 @@ struct AlbumCardView: View {
             }
         }
         .onAppear {
-            loadAlbumThumbnails()
+            // Don't load thumbnails for private albums
+            if !album.isPrivate {
+                loadAlbumThumbnails()
+            }
         }
     }
 
@@ -316,7 +335,22 @@ struct CreateAlbumSheet: View {
 struct AlbumDetailView: View {
     let album: Album
     @State private var albumPhotos: [Photo] = []
+    @State private var isAuthenticated = false
+    @State private var showAuthSheet = false
+    @State private var showPINSetup = false
+    @State private var showPrivacyToggleConfirm = false
+    @State private var currentAlbum: Album
     @EnvironmentObject var appState: AppState
+
+    private let albumService = AlbumService.shared
+    private let biometricService = BiometricService()
+    private let pinService = PrivateAlbumPINService()
+    private let keyService = PrivateAlbumKeyService()
+
+    init(album: Album) {
+        self.album = album
+        self._currentAlbum = State(initialValue: album)
+    }
 
     let columns = [
         GridItem(.adaptive(minimum: 100), spacing: 2)
@@ -326,7 +360,37 @@ struct AlbumDetailView: View {
         ZStack {
             Color.black.opacity(0.02).ignoresSafeArea()
 
-            if albumPhotos.isEmpty {
+            if currentAlbum.isPrivate && !isAuthenticated {
+                // Show authentication required view
+                VStack(spacing: 30) {
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 60))
+                        .foregroundColor(.locafotoPrimary)
+
+                    VStack(spacing: 8) {
+                        Text("Private Album")
+                            .font(.title2)
+                            .fontWeight(.bold)
+
+                        Text("Authentication required to view photos")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+
+                    Button(action: { showAuthSheet = true }) {
+                        HStack {
+                            Image(systemName: biometricService.isFaceIDAvailable() ? "faceid" : "lock.fill")
+                            Text(biometricService.isFaceIDAvailable() ? "Authenticate with Face ID" : "Enter PIN")
+                        }
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .padding()
+                        .background(Color.locafotoPrimary)
+                        .cornerRadius(12)
+                    }
+                }
+                .padding()
+            } else if albumPhotos.isEmpty {
                 VStack(spacing: 20) {
                     Image(systemName: "photo.on.rectangle")
                         .font(.system(size: 50))
@@ -350,7 +414,7 @@ struct AlbumDetailView: View {
                                 HStack(spacing: 4) {
                                     Image(systemName: "key.fill")
                                         .font(.caption)
-                                    Text(album.keyName)
+                                    Text(currentAlbum.keyName)
                                         .font(.caption)
                                 }
                                 .foregroundColor(.locafotoPrimary)
@@ -377,17 +441,147 @@ struct AlbumDetailView: View {
                 }
             }
         }
-        .navigationTitle(album.name)
+        .navigationTitle(currentAlbum.name)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(action: { showPrivacyToggleConfirm = true }) {
+                    Image(systemName: currentAlbum.isPrivate ? "eye.slash.fill" : "eye.fill")
+                        .foregroundColor(currentAlbum.isPrivate ? .locafotoPrimary : .secondary)
+                }
+            }
+        }
         .onAppear {
-            Task {
-                albumPhotos = await PhotoStore.shared.getPhotos(forAlbum: album.id)
+            if !currentAlbum.isPrivate {
+                isAuthenticated = true
+                loadPhotos()
             }
         }
         .onChange(of: appState.shouldRefreshGallery) { shouldRefresh in
-            if shouldRefresh {
+            if shouldRefresh && isAuthenticated {
+                loadPhotos()
+            }
+        }
+        .sheet(isPresented: $showAuthSheet) {
+            if biometricService.isFaceIDAvailable() {
+                FaceIDPromptView(
+                    albumName: currentAlbum.name,
+                    onAuthenticate: {
+                        do {
+                            _ = try await biometricService.authenticate(reason: "Authenticate to access \(currentAlbum.name)")
+                            return true
+                        } catch {
+                            return false
+                        }
+                    },
+                    onSuccess: {
+                        isAuthenticated = true
+                        loadPhotos()
+                    },
+                    onCancel: {
+                        showAuthSheet = false
+                    }
+                )
+            } else {
+                PINEntryView(
+                    albumName: currentAlbum.name,
+                    onVerify: { pin in
+                        pinService.verifyPIN(pin)
+                    },
+                    onSuccess: {
+                        isAuthenticated = true
+                        loadPhotos()
+                    }
+                )
+            }
+        }
+        .sheet(isPresented: $showPINSetup) {
+            PINSetupView { pin in
                 Task {
-                    albumPhotos = await PhotoStore.shared.getPhotos(forAlbum: album.id)
+                    await togglePrivacy(pin: pin)
                 }
+            }
+        }
+        .alert(currentAlbum.isPrivate ? "Make Album Public?" : "Make Album Private?", isPresented: $showPrivacyToggleConfirm) {
+            Button("Cancel", role: .cancel) { }
+            Button(currentAlbum.isPrivate ? "Make Public" : "Make Private") {
+                Task {
+                    await handlePrivacyToggle()
+                }
+            }
+        } message: {
+            if currentAlbum.isPrivate {
+                Text("Photos from this album will be visible in the All Photos gallery.")
+            } else {
+                Text("Photos from this album will be hidden from the All Photos gallery and will require Face ID or PIN to access.")
+            }
+        }
+    }
+
+    private func loadPhotos() {
+        Task {
+            albumPhotos = await PhotoStore.shared.getPhotos(forAlbum: album.id)
+        }
+    }
+
+    private func handlePrivacyToggle() async {
+        if currentAlbum.isPrivate {
+            // Disable private mode
+            await togglePrivacy(pin: nil)
+        } else {
+            // Enable private mode - check if auth is configured
+            if biometricService.isFaceIDAvailable() {
+                await togglePrivacy(pin: nil)
+            } else if pinService.isPINSetUp() {
+                await togglePrivacy(pin: nil)
+            } else {
+                // Need to set up PIN first
+                await MainActor.run {
+                    showPINSetup = true
+                }
+            }
+        }
+    }
+
+    private func togglePrivacy(pin: String?) async {
+        var updatedAlbum = currentAlbum
+        updatedAlbum.isPrivate.toggle()
+
+        do {
+            if updatedAlbum.isPrivate {
+                // Enable privacy - encrypt the album key
+                if let appPin = appState.currentPin {
+                    if biometricService.isFaceIDAvailable() {
+                        try await keyService.enablePrivateMode(for: currentAlbum, currentAppPin: appPin)
+                    } else if let privatePin = pin ?? (pinService.isPINSetUp() ? "" : nil) {
+                        // Use PIN protection (if we just set up PIN, use that)
+                        if !privatePin.isEmpty {
+                            try pinService.setPIN(privatePin)
+                        }
+                        try await keyService.enablePrivateModeWithPIN(for: currentAlbum, currentAppPin: appPin, privateAlbumPIN: privatePin.isEmpty ? appPin : privatePin)
+                    }
+                }
+            } else {
+                // Disable privacy - remove protected key
+                try await keyService.disablePrivateMode(for: currentAlbum)
+            }
+
+            // Update album in storage
+            try await albumService.updateAlbum(updatedAlbum)
+
+            await MainActor.run {
+                currentAlbum = updatedAlbum
+                appState.shouldRefreshGallery = true
+
+                if updatedAlbum.isPrivate {
+                    ToastManager.shared.showSuccess("Album is now private")
+                } else {
+                    ToastManager.shared.showSuccess("Album is now public")
+                    isAuthenticated = true
+                }
+            }
+        } catch {
+            await MainActor.run {
+                ToastManager.shared.showError("Failed to update privacy: \(error.localizedDescription)")
             }
         }
     }
