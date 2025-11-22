@@ -930,8 +930,6 @@ struct AddToAlbumSheet: View {
     @EnvironmentObject var appState: AppState
     @State private var albums: [Album] = []
     @State private var isMoving = false
-    @State private var errorMessage: String?
-    @State private var showError = false
 
     private let albumService = AlbumService.shared
 
@@ -1021,11 +1019,6 @@ struct AddToAlbumSheet: View {
                         .shadow(radius: 10)
                 }
             }
-            .alert("Move Failed", isPresented: $showError) {
-                Button("OK", role: .cancel) { }
-            } message: {
-                Text(errorMessage ?? "Failed to move photo")
-            }
             .onAppear {
                 Task {
                     try? await albumService.loadAlbums()
@@ -1036,9 +1029,8 @@ struct AddToAlbumSheet: View {
     }
 
     private func movePhoto(to targetAlbum: Album) async {
-        guard let pin = appState.currentPin else {
-            errorMessage = "No PIN available"
-            showError = true
+        guard appState.currentPin != nil else {
+            ToastManager.shared.showError("No PIN available")
             return
         }
 
@@ -1079,8 +1071,7 @@ struct AddToAlbumSheet: View {
             }
 
         } catch {
-            errorMessage = error.localizedDescription
-            showError = true
+            ToastManager.shared.showError(error.localizedDescription)
         }
 
         isMoving = false

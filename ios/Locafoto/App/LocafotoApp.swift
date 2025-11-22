@@ -218,7 +218,7 @@ struct LocafotoApp: App {
             print("❌ Failed to read .lfs file: \(error)")
             print("❌ Error details: \(error.localizedDescription)")
             await MainActor.run {
-                appState.lfsImportError = "Failed to read file: \(error.localizedDescription)"
+                ToastManager.shared.showError("Failed to read file: \(error.localizedDescription)")
                 appState.pendingImportCount -= 1
             }
             return
@@ -253,7 +253,7 @@ struct LocafotoApp: App {
         } catch {
             print("❌ Failed to import .lfs file: \(error)")
             await MainActor.run {
-                appState.lfsImportError = error.localizedDescription
+                ToastManager.shared.showError(error.localizedDescription)
                 appState.pendingImportCount -= 1
             }
         }
@@ -304,7 +304,7 @@ struct LocafotoApp: App {
             print("❌ Failed to read/parse .lfkey file: \(error)")
             print("❌ Error details: \(error.localizedDescription)")
             await MainActor.run {
-                appState.lfsImportError = "Failed to read key file: \(error.localizedDescription)"
+                ToastManager.shared.showError("Failed to read key file: \(error.localizedDescription)")
             }
             return
         }
@@ -337,13 +337,13 @@ struct LocafotoApp: App {
             // Notify UI to refresh keys and show success
             await MainActor.run {
                 appState.shouldRefreshKeys = true
-                appState.keyImportSuccess = sharedKey.name
+                ToastManager.shared.showSuccess("Successfully imported key: \(sharedKey.name)")
             }
         } catch {
             print("❌ Failed to import key: \(error)")
             print("❌ Error details: \(error.localizedDescription)")
             await MainActor.run {
-                appState.lfsImportError = "Failed to import key: \(error.localizedDescription)"
+                ToastManager.shared.showError("Failed to import key: \(error.localizedDescription)")
             }
         }
     }
@@ -448,24 +448,7 @@ struct RootView: View {
                 ContentView()
             }
         }
-        .alert("LFS Import Error", isPresented: .constant(appState.lfsImportError != nil)) {
-            Button("OK") {
-                appState.lfsImportError = nil
-            }
-        } message: {
-            if let error = appState.lfsImportError {
-                Text(error)
-            }
-        }
-        .alert("Key Imported", isPresented: .constant(appState.keyImportSuccess != nil)) {
-            Button("OK") {
-                appState.keyImportSuccess = nil
-            }
-        } message: {
-            if let keyName = appState.keyImportSuccess {
-                Text("Successfully imported key: \(keyName)")
-            }
-        }
+        .withToastContainer()
     }
 }
 
@@ -648,8 +631,6 @@ class AppState: ObservableObject {
     @Published var isPinSet = false
     @Published var isUnlocked = false
     @Published var needsMainAlbumSetup = false
-    @Published var lfsImportError: String?
-    @Published var keyImportSuccess: String?
     @Published var pendingImportCount: Int = 0
 
     // Face ID / Biometric settings
@@ -888,7 +869,7 @@ class AppState: ObservableObject {
             print("✅ Processed pending key file: \(sharedKey.name)")
             await MainActor.run {
                 shouldRefreshKeys = true
-                keyImportSuccess = sharedKey.name
+                ToastManager.shared.showSuccess("Successfully imported key: \(sharedKey.name)")
             }
         } catch {
             print("❌ Failed to process pending .lfkey file: \(error)")

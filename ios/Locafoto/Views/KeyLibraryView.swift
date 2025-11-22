@@ -8,8 +8,6 @@ struct KeyLibraryView: View {
     @State private var showFilePicker = false
     @State private var showDeleteConfirmation = false
     @State private var keyToDelete: KeyFile?
-    @State private var importError: String?
-    @State private var showImportError = false
     @EnvironmentObject var appState: AppState
 
     var body: some View {
@@ -34,11 +32,6 @@ struct KeyLibraryView: View {
                             }
                         }
                     )
-                }
-                .alert("Import Error", isPresented: $showImportError) {
-                    Button("OK", role: .cancel) { }
-                } message: {
-                    Text(importError ?? "Failed to import key")
                 }
                 .onAppear {
                     Task {
@@ -193,8 +186,7 @@ struct KeyLibraryView: View {
 
     private func importKeyFromFile(_ url: URL) async {
         guard let pin = appState.currentPin else {
-            importError = "No PIN available"
-            showImportError = true
+            ToastManager.shared.showError("No PIN available")
             return
         }
 
@@ -214,10 +206,10 @@ struct KeyLibraryView: View {
 
             // Import the key
             await viewModel.importKey(name: sharedKey.name, keyData: sharedKey.keyData, pin: pin)
+            ToastManager.shared.showSuccess("Key '\(sharedKey.name)' imported successfully")
 
         } catch {
-            importError = error.localizedDescription
-            showImportError = true
+            ToastManager.shared.showError(error.localizedDescription)
         }
     }
 }
@@ -321,8 +313,6 @@ struct CreateKeyView: View {
     @State private var isCreating = false
     @State private var showAdvanced = false
     @State private var customKeyHex = ""
-    @State private var showError = false
-    @State private var errorMessage = ""
 
     let onCreate: (String) async -> Void
     let onCreateWithData: ((String, Data) async -> Void)?
@@ -379,11 +369,6 @@ struct CreateKeyView: View {
                     .disabled(keyName.isEmpty || isCreating)
                 }
             }
-            .alert("Error", isPresented: $showError) {
-                Button("OK", role: .cancel) { }
-            } message: {
-                Text(errorMessage)
-            }
         }
     }
 
@@ -396,15 +381,13 @@ struct CreateKeyView: View {
                 .replacingOccurrences(of: "\n", with: "")
 
             guard let keyData = Data(hexString: cleanHex) else {
-                errorMessage = "Invalid hexadecimal format"
-                showError = true
+                ToastManager.shared.showError("Invalid hexadecimal format")
                 isCreating = false
                 return
             }
 
             guard keyData.count == 32 else {
-                errorMessage = "Key must be exactly 32 bytes (64 hex characters)"
-                showError = true
+                ToastManager.shared.showError("Key must be exactly 32 bytes (64 hex characters)")
                 isCreating = false
                 return
             }
@@ -426,8 +409,6 @@ struct ImportKeyView: View {
     @State private var keyName = ""
     @State private var keyHex = ""
     @State private var isImporting = false
-    @State private var showError = false
-    @State private var errorMessage = ""
 
     let onImport: (String, Data) async -> Void
 
@@ -468,11 +449,6 @@ struct ImportKeyView: View {
                     .disabled(keyName.isEmpty || keyHex.isEmpty || isImporting)
                 }
             }
-            .alert("Import Error", isPresented: $showError) {
-                Button("OK", role: .cancel) { }
-            } message: {
-                Text(errorMessage)
-            }
         }
     }
 
@@ -484,15 +460,13 @@ struct ImportKeyView: View {
             .replacingOccurrences(of: "\n", with: "")
 
         guard let keyData = Data(hexString: cleanHex) else {
-            errorMessage = "Invalid hexadecimal format"
-            showError = true
+            ToastManager.shared.showError("Invalid hexadecimal format")
             isImporting = false
             return
         }
 
         guard keyData.count == 32 else {
-            errorMessage = "Key must be exactly 32 bytes (64 hex characters)"
-            showError = true
+            ToastManager.shared.showError("Key must be exactly 32 bytes (64 hex characters)")
             isImporting = false
             return
         }

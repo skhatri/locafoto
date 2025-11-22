@@ -8,8 +8,6 @@ import CoreImage.CIFilterBuiltins
 class CameraViewModel: NSObject, ObservableObject {
     @Published var captureSession = AVCaptureSession()
     @Published var isCapturing = false
-    @Published var showSuccessAlert = false
-    @Published var showErrorAlert = false
     @Published var errorMessage: String?
     @Published var isCameraReady = false
     @Published var needsPermission = false
@@ -87,7 +85,7 @@ class CameraViewModel: NSObject, ObservableObject {
             isUsingFrontCamera.toggle()
         } catch {
             errorMessage = "Failed to flip camera: \(error.localizedDescription)"
-            showErrorAlert = true
+            ToastManager.shared.showError("Failed to flip camera: \(error.localizedDescription)")
         }
     }
 
@@ -138,13 +136,13 @@ class CameraViewModel: NSObject, ObservableObject {
 
         guard let keyName = selectedKeyName else {
             errorMessage = "Please select an encryption key first"
-            showErrorAlert = true
+            ToastManager.shared.showError("Please select an encryption key first")
             return
         }
 
         guard let albumId = selectedAlbumId else {
             errorMessage = "Please select an album first"
-            showErrorAlert = true
+            ToastManager.shared.showError("Please select an album first")
             return
         }
 
@@ -212,12 +210,12 @@ class CameraViewModel: NSObject, ObservableObject {
 
             // Show success
             isCapturing = false
-            showSuccessAlert = true
+            ToastManager.shared.showSuccess("Photo encrypted and saved securely")
 
         } catch {
             errorMessage = "Failed to save photo: \(error.localizedDescription)"
             isCapturing = false
-            showErrorAlert = true
+            ToastManager.shared.showError("Failed to save photo: \(error.localizedDescription)")
         }
     }
 
