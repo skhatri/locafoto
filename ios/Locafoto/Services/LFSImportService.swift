@@ -60,10 +60,28 @@ actor LFSImportService {
 
         let decryptedData = try AES.GCM.open(sealedBox, using: encryptionKey)
 
-        // Determine if it's an image
-        guard let image = UIImage(data: decryptedData) else {
-            throw LFSError.invalidFormat
+        // Validate decrypted data is an image
+        guard !decryptedData.isEmpty else {
+            print("❌ Decrypted data is empty")
+            throw LFSError.invalidImageData("Decrypted data is empty")
         }
+
+        guard let image = UIImage(data: decryptedData) else {
+            // Log details for debugging
+            let prefix = decryptedData.prefix(16).map { String(format: "%02x", $0) }.joined()
+            print("❌ Failed to create UIImage from decrypted data")
+            print("   Data size: \(decryptedData.count) bytes")
+            print("   Data prefix: \(prefix)")
+            throw LFSError.invalidImageData("Cannot decode image data (\(decryptedData.count) bytes)")
+        }
+
+        // Validate image dimensions
+        guard image.size.width > 0 && image.size.height > 0 else {
+            print("❌ Image has invalid dimensions: \(image.size)")
+            throw LFSError.invalidImageData("Image has zero dimensions")
+        }
+
+        print("✅ Validated image: \(Int(image.size.width))x\(Int(image.size.height))")
 
         // Generate thumbnail
         let thumbnailData = try generateThumbnail(from: decryptedData)
@@ -163,10 +181,16 @@ actor LFSImportService {
     /// Generate thumbnail from photo data
     private func generateThumbnail(from data: Data, size: CGFloat = 200) throws -> Data {
         guard let image = UIImage(data: data) else {
-            throw LFSError.invalidFormat
+            throw LFSError.invalidImageData("Cannot create image for thumbnail")
         }
 
-        let scale = size / max(image.size.width, image.size.height)
+        // Validate dimensions
+        let maxDim = max(image.size.width, image.size.height)
+        guard maxDim > 0 else {
+            throw LFSError.invalidImageData("Image has zero dimensions for thumbnail")
+        }
+
+        let scale = size / maxDim
         let newSize = CGSize(
             width: image.size.width * scale,
             height: image.size.height * scale
@@ -177,9 +201,15 @@ actor LFSImportService {
         let thumbnail = UIGraphicsGetImageFromCurrentImageContext()
         UIGraphicsEndImageContext()
 
-        guard let thumbnailData = thumbnail?.jpegData(compressionQuality: 0.8) else {
-            throw LFSError.invalidFormat
+        guard let thumbnail = thumbnail else {
+            throw LFSError.invalidImageData("Failed to create thumbnail context")
         }
+
+        guard let thumbnailData = thumbnail.jpegData(compressionQuality: 0.8) else {
+            throw LFSError.invalidImageData("Failed to encode thumbnail as JPEG")
+        }
+
+        print("✅ Generated thumbnail: \(Int(newSize.width))x\(Int(newSize.height)), \(thumbnailData.count) bytes")
 
         return thumbnailData
     }

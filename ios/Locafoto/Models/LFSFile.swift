@@ -115,6 +115,7 @@ enum LFSError: LocalizedError {
     case keyNotFound
     case decryptionFailed
     case noAlbumAvailable
+    case invalidImageData(String)
 
     var errorDescription: String? {
         switch self {
@@ -130,6 +131,8 @@ enum LFSError: LocalizedError {
             return "Failed to decrypt file"
         case .noAlbumAvailable:
             return "No album available to import photo"
+        case .invalidImageData(let details):
+            return "Invalid image data: \(details)"
         }
     }
 }
