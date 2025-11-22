@@ -290,7 +290,17 @@ struct MiniAlbumCard: View {
                     .fill(Color(.secondarySystemBackground))
                     .frame(width: 80, height: 80)
 
-                if album.photoCount == 0 {
+                if album.isPrivate {
+                    // Private album - show lock icon
+                    VStack(spacing: 4) {
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 20))
+                            .foregroundColor(.locafotoPrimary)
+                        Text("Private")
+                            .font(.system(size: 8))
+                            .foregroundColor(.secondary)
+                    }
+                } else if album.photoCount == 0 {
                     Image(systemName: "rectangle.stack.fill")
                         .font(.system(size: 24))
                         .foregroundColor(.locafotoPrimary.opacity(0.5))
@@ -305,12 +315,24 @@ struct MiniAlbumCard: View {
                         .controlSize(.small)
                 }
             }
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(album.isPrivate ? Color.locafotoPrimary.opacity(0.5) : Color.clear, lineWidth: 1)
+            )
 
-            Text(album.name)
-                .font(.caption)
-                .fontWeight(.medium)
-                .foregroundColor(.primary)
-                .lineLimit(1)
+            HStack(spacing: 2) {
+                Text(album.name)
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundColor(.primary)
+                    .lineLimit(1)
+
+                if album.isPrivate {
+                    Image(systemName: "eye.slash.fill")
+                        .font(.system(size: 8))
+                        .foregroundColor(.locafotoPrimary)
+                }
+            }
 
             Text("\(album.photoCount)")
                 .font(.caption2)
@@ -318,7 +340,10 @@ struct MiniAlbumCard: View {
         }
         .frame(width: 80)
         .onAppear {
-            loadThumbnail()
+            // Don't load thumbnails for private albums
+            if !album.isPrivate {
+                loadThumbnail()
+            }
         }
     }
 

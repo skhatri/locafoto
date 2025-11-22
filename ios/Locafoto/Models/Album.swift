@@ -8,19 +8,21 @@ struct Album: Identifiable, Codable {
     var createdDate: Date
     var modifiedDate: Date
     var isMain: Bool  // Is this the main/default album
+    var isPrivate: Bool  // Private albums require Face ID/PIN to access
 
     // Cached thumbnail photo IDs (first and last photo for overlay effect)
     var firstPhotoId: UUID?
     var lastPhotoId: UUID?
     var photoCount: Int
 
-    init(id: UUID = UUID(), name: String, keyName: String, isMain: Bool = false) {
+    init(id: UUID = UUID(), name: String, keyName: String, isMain: Bool = false, isPrivate: Bool = false) {
         self.id = id
         self.name = name
         self.keyName = keyName
         self.createdDate = Date()
         self.modifiedDate = Date()
         self.isMain = isMain
+        self.isPrivate = isPrivate
         self.firstPhotoId = nil
         self.lastPhotoId = nil
         self.photoCount = 0
