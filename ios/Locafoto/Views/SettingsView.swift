@@ -49,8 +49,6 @@ struct SettingsView: View {
     @State private var showDeleteConfirmation = false
     @State private var fileToDelete: ReceivedFileInfo?
     @State private var orphanToDelete: OrphanedPhotoInfo?
-    @State private var showFaceIDError = false
-    @State private var faceIDErrorMessage = ""
     @State private var isFaceIDAvailable = false
 
     private var thumbnailStyle: ThumbnailStyle {
@@ -296,11 +294,6 @@ struct SettingsView: View {
                 loadOrphanedPhotos()
                 checkFaceIDAvailability()
             }
-            .alert("Face ID Error", isPresented: $showFaceIDError) {
-                Button("OK", role: .cancel) { }
-            } message: {
-                Text(faceIDErrorMessage)
-            }
             .alert("Delete File", isPresented: $showDeleteConfirmation) {
                 Button("Cancel", role: .cancel) {
                     fileToDelete = nil
@@ -350,15 +343,13 @@ struct SettingsView: View {
 
     private func enableFaceID() async {
         guard let pin = appState.currentPin else {
-            faceIDErrorMessage = "PIN is required to enable Face ID. Please unlock with your PIN first."
-            showFaceIDError = true
+            ToastManager.shared.showError("PIN is required to enable Face ID. Please unlock with your PIN first.")
             return
         }
 
         let success = await appState.enableFaceID(with: pin)
         if !success {
-            faceIDErrorMessage = "Failed to enable Face ID. Please try again."
-            showFaceIDError = true
+            ToastManager.shared.showError("Failed to enable Face ID. Please try again.")
         }
     }
 

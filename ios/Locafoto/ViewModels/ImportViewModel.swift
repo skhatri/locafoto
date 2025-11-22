@@ -10,8 +10,6 @@ class ImportViewModel: ObservableObject {
     @Published var importProgress: Double = 0
     @Published var importedCount = 0
     @Published var totalCount = 0
-    @Published var showSuccessAlert = false
-    @Published var showErrorAlert = false
     @Published var errorMessage: String?
     @Published var availableKeys: [KeyFile] = []
     @Published var availableAlbums: [Album] = []
@@ -77,12 +75,12 @@ class ImportViewModel: ObservableObject {
 
             pendingResults = []
             isImporting = false
-            showSuccessAlert = true
+            ToastManager.shared.showSuccess("Successfully imported \(importedCount) photos")
 
         } catch {
             errorMessage = error.localizedDescription
             isImporting = false
-            showErrorAlert = true
+            ToastManager.shared.showError(error.localizedDescription)
         }
     }
 }

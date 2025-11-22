@@ -202,16 +202,6 @@ struct CameraView: View {
                     }
                 }
             }
-            .alert("Photo Saved", isPresented: $viewModel.showSuccessAlert) {
-                Button("OK", role: .cancel) { }
-            } message: {
-                Text("Your photo has been encrypted and saved securely.")
-            }
-            .alert("Error", isPresented: $viewModel.showErrorAlert) {
-                Button("OK", role: .cancel) { }
-            } message: {
-                Text(viewModel.errorMessage ?? "Failed to capture photo")
-            }
             .onAppear {
                 Task {
                     await viewModel.loadAlbums()

@@ -4,8 +4,6 @@ struct PINSetupView: View {
     @State private var pin = ""
     @State private var confirmPin = ""
     @State private var isCreating = false
-    @State private var showError = false
-    @State private var errorMessage = ""
 
     let onPINSet: (String) async -> Void
 
@@ -146,11 +144,6 @@ struct PINSetupView: View {
                 Spacer()
             }
         }
-        .alert("Error", isPresented: $showError) {
-            Button("OK", role: .cancel) { }
-        } message: {
-            Text(errorMessage)
-        }
     }
 
     private var isValidPIN: Bool {
@@ -159,8 +152,7 @@ struct PINSetupView: View {
 
     private func setupPIN() async {
         guard isValidPIN else {
-            errorMessage = "PINs must match and be at least 4 digits"
-            showError = true
+            ToastManager.shared.showError("PINs must match and be at least 4 digits")
             return
         }
 

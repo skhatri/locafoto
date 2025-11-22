@@ -6,9 +6,6 @@ struct ImportView: View {
     @StateObject private var viewModel = ImportViewModel()
     @EnvironmentObject var appState: AppState
     @State private var showLFSFilePicker = false
-    @State private var lfsImportError: String?
-    @State private var showLFSImportError = false
-    @State private var showLFSImportSuccess = false
 
     var body: some View {
         NavigationView {
@@ -87,16 +84,6 @@ struct ImportView: View {
                     viewModel.showKeySelection = false
                 }
             }
-            .alert("Import Complete", isPresented: $viewModel.showSuccessAlert) {
-                Button("OK", role: .cancel) { }
-            } message: {
-                Text("Successfully imported \(viewModel.importedCount) photos.")
-            }
-            .alert("Import Error", isPresented: $viewModel.showErrorAlert) {
-                Button("OK", role: .cancel) { }
-            } message: {
-                Text(viewModel.errorMessage ?? "Failed to import photos")
-            }
             .sheet(isPresented: $showLFSFilePicker) {
                 LFSDocumentPickerView(
                     contentTypes: [UTType(filenameExtension: "lfs") ?? .data],
@@ -107,23 +94,12 @@ struct ImportView: View {
                     }
                 )
             }
-            .alert("LFS Import Error", isPresented: $showLFSImportError) {
-                Button("OK", role: .cancel) { }
-            } message: {
-                Text(lfsImportError ?? "Failed to import .lfs file")
-            }
-            .alert("Import Complete", isPresented: $showLFSImportSuccess) {
-                Button("OK", role: .cancel) { }
-            } message: {
-                Text("Successfully imported .lfs file")
-            }
         }
     }
 
     private func importLFSFile(_ url: URL) async {
         guard let pin = appState.currentPin else {
-            lfsImportError = "No PIN available"
-            showLFSImportError = true
+            ToastManager.shared.showError("No PIN available")
             return
         }
 
@@ -139,11 +115,10 @@ struct ImportView: View {
 
             await MainActor.run {
                 appState.shouldRefreshGallery = true
-                showLFSImportSuccess = true
+                ToastManager.shared.showSuccess("Successfully imported .lfs file")
             }
         } catch {
-            lfsImportError = error.localizedDescription
-            showLFSImportError = true
+            ToastManager.shared.showError(error.localizedDescription)
         }
     }
 }
