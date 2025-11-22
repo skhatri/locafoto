@@ -30,40 +30,33 @@ struct ContentView: View {
                 }
                 .tag(0)
 
-            // Albums View
-            AlbumsView()
-                .tabItem {
-                    Label("Albums", systemImage: "rectangle.stack")
-                }
-                .tag(1)
-
             // Camera View
             CameraView(selectedTab: $selectedTab)
                 .tabItem {
                     Label("Camera", systemImage: "camera")
                 }
-                .tag(2)
+                .tag(1)
 
             // Import View
             ImportView()
                 .tabItem {
                     Label("Import", systemImage: "square.and.arrow.down")
                 }
-                .tag(3)
+                .tag(2)
 
             // Key Library View
             KeyLibraryView()
                 .tabItem {
                     Label("Keys", systemImage: "key.fill")
                 }
-                .tag(4)
+                .tag(3)
 
             // Settings View
             SettingsView()
                 .tabItem {
                     Label("Settings", systemImage: "gear")
                 }
-                .tag(5)
+                .tag(4)
         }
         .tint(.locafotoPrimary)
     }

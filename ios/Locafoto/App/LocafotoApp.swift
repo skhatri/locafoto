@@ -14,9 +14,9 @@ struct LocafotoApp: App {
         WindowGroup {
             RootView()
                 .environmentObject(appState)
-                .onChange(of: scenePhase) { _, newPhase in
+                .onChange(of: scenePhase, perform: { newPhase in
                     handleScenePhaseChange(newPhase)
-                }
+                })
                 .onOpenURL { url in
                     print("🔵 onOpenURL CALLED with: \(url)")
                     print("🔵 URL path: \(url.path)")
@@ -135,24 +135,30 @@ struct LocafotoApp: App {
     }
 
     private func handleLocaphotoFile(url: URL, isInFilesApp: Bool) async {
+        print("📸 Processing .locaphoto file")
         do {
             // Read file data immediately while we have access
             let fileData = try Data(contentsOf: url)
+            print("✅ Read \(fileData.count) bytes from file")
             
             // Copy to a temporary location we control
             let tempURL = try copyToTempLocation(data: fileData, filename: url.lastPathComponent)
+            print("✅ Copied to temp: \(tempURL.path)")
             
-            // If file was in Files app, delete it immediately to prevent user from seeing it there
+            // CRITICAL: Delete from Inbox/Documents IMMEDIATELY before processing
+            // This prevents Files app visibility
             if isInFilesApp {
                 do {
                     try FileManager.default.removeItem(at: url)
-                    print("🗑️ Removed file from Files app directory")
+                    print("🗑️ DELETED file from Inbox/Documents - Files app won't show it")
                 } catch {
-                    print("⚠️ Could not remove file from Files app: \(error)")
+                    print("❌ CRITICAL: Could not delete file from Inbox: \(error)")
+                    // Continue anyway - at least we have a copy
                 }
             } else {
                 // Clean up the original AirDrop file immediately
                 try? FileManager.default.removeItem(at: url)
+                print("🗑️ Deleted original AirDrop file")
             }
             
             let sharingService = SharingService()
@@ -167,10 +173,12 @@ struct LocafotoApp: App {
             }
         } catch {
             print("❌ Failed to import .locaphoto: \(error)")
+            print("❌ Error details: \(error.localizedDescription)")
         }
     }
 
     private func handleLFSFile(url: URL, isInFilesApp: Bool) async {
+        print("📦 Processing .lfs file")
         // Increment pending count
         await MainActor.run {
             appState.pendingImportCount += 1
@@ -182,27 +190,33 @@ struct LocafotoApp: App {
         do {
             // Read file data immediately while we have access
             let fileData = try Data(contentsOf: url)
+            print("✅ Read \(fileData.count) bytes from .lfs file")
             
             // Copy to a temporary location we control (this persists across unlock)
             tempURL = try copyToTempLocation(data: fileData, filename: url.lastPathComponent)
+            print("✅ Copied to temp: \(tempURL.path)")
             
             // Save a copy to our received files directory for reference
             try saveReceivedFile(data: fileData, filename: url.lastPathComponent, type: "lfs")
             
-            // If file was in Files app, delete it immediately to prevent user from seeing it there
+            // CRITICAL: Delete from Inbox/Documents IMMEDIATELY before processing
+            // This prevents Files app visibility
             if isInFilesApp {
                 do {
                     try FileManager.default.removeItem(at: url)
-                    print("🗑️ Removed .lfs file from Files app directory")
+                    print("🗑️ DELETED .lfs file from Inbox/Documents - Files app won't show it")
                 } catch {
-                    print("⚠️ Could not remove file from Files app: \(error)")
+                    print("❌ CRITICAL: Could not delete .lfs file from Inbox: \(error)")
+                    // Continue anyway - at least we have a copy
                 }
             } else {
                 // Clean up the original AirDrop file immediately to prevent saving to Files app
                 try? FileManager.default.removeItem(at: url)
+                print("🗑️ Deleted original AirDrop .lfs file")
             }
         } catch {
             print("❌ Failed to read .lfs file: \(error)")
+            print("❌ Error details: \(error.localizedDescription)")
             await MainActor.run {
                 appState.lfsImportError = "Failed to read file: \(error.localizedDescription)"
                 appState.pendingImportCount -= 1
@@ -246,6 +260,7 @@ struct LocafotoApp: App {
     }
 
     private func handleKeyFile(url: URL, isInFilesApp: Bool) async {
+        print("🔑 Processing .lfkey file")
         // CRITICAL: Read file data IMMEDIATELY while we have security-scoped access
         // Don't wait for unlock - the file might become inaccessible
         let tempURL: URL
@@ -254,24 +269,29 @@ struct LocafotoApp: App {
         do {
             // Read the key file immediately while we have access
             let fileData = try Data(contentsOf: url)
+            print("✅ Read \(fileData.count) bytes from .lfkey file")
             
             // Copy to a temporary location we control (this persists across unlock)
             tempURL = try copyToTempLocation(data: fileData, filename: url.lastPathComponent)
+            print("✅ Copied to temp: \(tempURL.path)")
             
             // Save a copy to our received files directory for reference
             try saveReceivedFile(data: fileData, filename: url.lastPathComponent, type: "keys")
             
-            // If file was in Files app, delete it immediately to prevent user from seeing it there
+            // CRITICAL: Delete from Inbox/Documents IMMEDIATELY before processing
+            // This prevents Files app visibility
             if isInFilesApp {
                 do {
                     try FileManager.default.removeItem(at: url)
-                    print("🗑️ Removed .lfkey file from Files app directory")
+                    print("🗑️ DELETED .lfkey file from Inbox/Documents - Files app won't show it")
                 } catch {
-                    print("⚠️ Could not remove file from Files app: \(error)")
+                    print("❌ CRITICAL: Could not delete .lfkey file from Inbox: \(error)")
+                    // Continue anyway - at least we have a copy
                 }
             } else {
                 // Clean up the original AirDrop file immediately to prevent saving to Files app
                 try? FileManager.default.removeItem(at: url)
+                print("🗑️ Deleted original AirDrop .lfkey file")
             }
 
             // Decode the shared key structure immediately (no PIN needed for this)
@@ -282,6 +302,7 @@ struct LocafotoApp: App {
             print("🔑 Parsed key file: '\(sharedKey.name)'")
         } catch {
             print("❌ Failed to read/parse .lfkey file: \(error)")
+            print("❌ Error details: \(error.localizedDescription)")
             await MainActor.run {
                 appState.lfsImportError = "Failed to read key file: \(error.localizedDescription)"
             }
@@ -299,6 +320,7 @@ struct LocafotoApp: App {
         }
 
         do {
+            print("🔓 App unlocked, importing key...")
             // Import the key immediately - no review needed, just save it
             let keyManagementService = KeyManagementService()
             _ = try await keyManagementService.importKey(
@@ -319,6 +341,7 @@ struct LocafotoApp: App {
             }
         } catch {
             print("❌ Failed to import key: \(error)")
+            print("❌ Error details: \(error.localizedDescription)")
             await MainActor.run {
                 appState.lfsImportError = "Failed to import key: \(error.localizedDescription)"
             }
@@ -648,11 +671,10 @@ class AppState: ObservableObject {
     private let seedDataService = SeedDataService()
     let biometricService = BiometricService()
 
-    override init() {
+    init() {
         // Load saved settings
         self.isFaceIDEnabled = UserDefaults.standard.bool(forKey: "isFaceIDEnabled")
         self.lockOnBackground = UserDefaults.standard.bool(forKey: "lockOnBackground")
-        super.init()
     }
 
     /// Check if PIN is already set up
