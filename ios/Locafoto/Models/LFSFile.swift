@@ -113,7 +113,7 @@ enum LFSError: LocalizedError {
     case invalidKeyName
     case keyNameTooLong
     case keyNotFound
-    case decryptionFailed
+    case decryptionFailed(String)
     case noAlbumAvailable
     case invalidImageData(String)
     case importFailed(String)
@@ -128,8 +128,8 @@ enum LFSError: LocalizedError {
             return "Key name exceeds 128 bytes"
         case .keyNotFound:
             return "Encryption key not found"
-        case .decryptionFailed:
-            return "Failed to decrypt file"
+        case .decryptionFailed(let details):
+            return "Failed to decrypt file: \(details)"
         case .noAlbumAvailable:
             return "No album available to import photo"
         case .invalidImageData(let details):

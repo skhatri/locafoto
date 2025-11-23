@@ -134,7 +134,7 @@ struct AlbumsView: View {
                 get: { !shareURLs.isEmpty },
                 set: { if !$0 { shareURLs = [] } }
             )) {
-                ShareSheet(activityItems: shareURLs)
+                AlbumShareSheet(activityItems: shareURLs)
             }
             .overlay {
                 if isPreparingShare {
@@ -196,7 +196,7 @@ struct AlbumsView: View {
 
 // MARK: - Share Sheet
 
-struct ShareSheet: UIViewControllerRepresentable {
+struct AlbumShareSheet: UIViewControllerRepresentable {
     let activityItems: [Any]
 
     func makeUIViewController(context: Context) -> UIActivityViewController {
@@ -579,7 +579,7 @@ struct AlbumDetailView: View {
             get: { !shareURLs.isEmpty },
             set: { if !$0 { shareURLs = [] } }
         )) {
-            ShareSheet(activityItems: shareURLs)
+            AlbumShareSheet(activityItems: shareURLs)
         }
         .overlay {
             if isPreparingShare {

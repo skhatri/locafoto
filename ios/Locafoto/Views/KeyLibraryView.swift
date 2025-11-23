@@ -8,6 +8,8 @@ struct KeyLibraryView: View {
     @State private var showFilePicker = false
     @State private var showDeleteConfirmation = false
     @State private var keyToDelete: KeyFile?
+    @State private var shareURL: URL?
+    @State private var showShareSheet = false
     @EnvironmentObject var appState: AppState
 
     var body: some View {
@@ -53,6 +55,30 @@ struct KeyLibraryView: View {
                 } message: { key in
                     deleteAlertMessage(for: key)
                 }
+                .sheet(isPresented: $showShareSheet) {
+                    if let url = shareURL {
+                        KeyShareSheet(items: [url])
+                    }
+                }
+        }
+    }
+    
+    private func shareKey(_ key: KeyFile) async {
+        guard let pin = appState.currentPin else {
+            ToastManager.shared.showError("No PIN available")
+            return
+        }
+        
+        do {
+            let keyManagementService = KeyManagementService()
+            let url = try await keyManagementService.exportKey(byName: key.name, pin: pin)
+            
+            await MainActor.run {
+                shareURL = url
+                showShareSheet = true
+            }
+        } catch {
+            ToastManager.shared.showError("Failed to export key: \(error.localizedDescription)")
         }
     }
     
@@ -102,18 +128,35 @@ struct KeyLibraryView: View {
     private var keysSection: some View {
         Section(header: Text("Encryption Keys")) {
             ForEach(viewModel.keys) { key in
-                KeyRow(key: key, fileCount: viewModel.fileCount(for: key.name))
-                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                        Button(role: .destructive) {
-                            keyToDelete = key
-                            Task {
-                                await viewModel.checkCanDelete(key)
-                                showDeleteConfirmation = true
-                            }
-                        } label: {
-                            Label("Delete", systemImage: "trash")
+                KeyRow(
+                    key: key,
+                    fileCount: viewModel.fileCount(for: key.name),
+                    onShare: {
+                        Task {
+                            await shareKey(key)
                         }
                     }
+                )
+                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                    Button {
+                        Task {
+                            await shareKey(key)
+                        }
+                    } label: {
+                        Label("Share", systemImage: "square.and.arrow.up")
+                    }
+                    .tint(.blue)
+                    
+                    Button(role: .destructive) {
+                        keyToDelete = key
+                        Task {
+                            await viewModel.checkCanDelete(key)
+                            showDeleteConfirmation = true
+                        }
+                    } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+                }
             }
         }
     }
@@ -249,6 +292,7 @@ struct EmptyKeyLibraryView: View {
 struct KeyRow: View {
     let key: KeyFile
     let fileCount: Int
+    let onShare: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -260,6 +304,13 @@ struct KeyRow: View {
                     .font(.headline)
 
                 Spacer()
+                
+                Button(action: onShare) {
+                    Image(systemName: "square.and.arrow.up")
+                        .foregroundColor(.blue)
+                        .font(.body)
+                }
+                .buttonStyle(.plain)
 
                 if fileCount > 0 {
                     HStack(spacing: 4) {
@@ -532,6 +583,20 @@ struct DocumentPickerView: UIViewControllerRepresentable {
             guard let url = urls.first else { return }
             onPick(url)
         }
+    }
+}
+
+// MARK: - Share Sheet
+
+struct KeyShareSheet: UIViewControllerRepresentable {
+    let items: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {
+        // No update needed
     }
 }
 

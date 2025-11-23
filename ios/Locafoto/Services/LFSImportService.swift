@@ -155,16 +155,38 @@ actor LFSImportService {
         // Load the photo data (encrypted)
         let encryptedPhotoData = try await storageService.loadPhoto(for: photo.id)
 
-        // Decrypt the photo (to re-encrypt with LFS key)
-        let encryptionService = EncryptionService()
-        let decryptedData = try await encryptionService.decryptPhotoData(
-            encryptedPhotoData,
-            encryptedKey: photo.encryptedKeyData,
-            iv: photo.ivData,
-            authTag: photo.authTagData
-        )
+        // Decrypt the photo - check if it's LFS-tracked first
+        let decryptedData: Data
+        
+        if let lfsTracking = try await trackingService.getTrackingInfo(forPhotoId: photo.id) {
+            // Photo is LFS-tracked - decrypt using LFS key with tracking IV/authTag
+            print("ℹ️ Photo \(photo.id) is LFS-tracked. Decrypting with LFS key: '\(lfsTracking.keyName)'")
+            
+            guard let iv = lfsTracking.iv, let authTag = lfsTracking.authTag else {
+                throw LFSError.decryptionFailed("LFS tracking missing IV or AuthTag")
+            }
+            
+            // Get the LFS key used for this photo
+            let lfsEncryptionKey = try await keyManagementService.getKey(byName: lfsTracking.keyName, pin: pin)
+            
+            let nonce = try AES.GCM.Nonce(data: iv)
+            let sealedBox = try AES.GCM.SealedBox(nonce: nonce, ciphertext: encryptedPhotoData, tag: authTag)
+            decryptedData = try AES.GCM.open(sealedBox, using: lfsEncryptionKey)
+            print("✅ Successfully decrypted LFS photo with LFS key.")
+        } else {
+            // Photo is not LFS-tracked - decrypt using master key (Photo model encryption info)
+            print("ℹ️ Photo \(photo.id) is not LFS-tracked. Decrypting with Photo model encryption info.")
+            let encryptionService = EncryptionService()
+            decryptedData = try await encryptionService.decryptPhotoData(
+                encryptedPhotoData,
+                encryptedKey: photo.encryptedKeyData,
+                iv: photo.ivData,
+                authTag: photo.authTagData
+            )
+            print("✅ Successfully decrypted photo with Photo model encryption info.")
+        }
 
-        // Get the LFS encryption key
+        // Get the LFS encryption key for the album
         let lfsKey = try await keyManagementService.getKey(byName: keyName, pin: pin)
 
         // Encrypt with LFS key

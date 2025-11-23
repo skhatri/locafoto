@@ -826,27 +826,7 @@ struct ShareOptionsView: View {
     var body: some View {
         NavigationView {
             List {
-                Section(header: Text("Share Format")) {
-                    Button(action: {
-                        Task {
-                            await shareAsLocaphoto()
-                        }
-                    }) {
-                        HStack {
-                            Image(systemName: "lock.doc.fill")
-                                .foregroundColor(.locafotoPrimary)
-                            VStack(alignment: .leading) {
-                                Text(".locaphoto")
-                                    .font(.headline)
-                                Text("Standard encrypted photo format")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                    }
-                }
-
-                Section(header: Text("Share as .lfs (Locafoto Shared)")) {
+                Section(header: Text("Select Encryption Key")) {
                     if keys.isEmpty {
                         Text("No encryption keys available. Create one in the Keys tab.")
                             .font(.caption)
@@ -864,17 +844,26 @@ struct ShareOptionsView: View {
                                     VStack(alignment: .leading) {
                                         Text(key.name)
                                             .font(.headline)
-                                        Text("Encrypt with this key")
+                                        Text("Encrypt photo with this key")
                                             .font(.caption)
                                             .foregroundColor(.secondary)
                                     }
+                                    Spacer()
+                                    if isLoading {
+                                        ProgressView()
+                                    }
                                 }
                             }
+                            .disabled(isLoading)
                         }
                     }
                 }
+                
+                Section(footer: Text("The photo will be decrypted and re-encrypted with the selected key. Make sure the recipient has this key.")) {
+                    EmptyView()
+                }
             }
-            .navigationTitle("Share Options")
+            .navigationTitle("Share Photo")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -890,7 +879,15 @@ struct ShareOptionsView: View {
             }
             .overlay {
                 if isLoading {
-                    ProgressView()
+                    ZStack {
+                        Color.black.opacity(0.3)
+                            .ignoresSafeArea()
+                        ProgressView()
+                            .scaleEffect(1.5)
+                            .padding()
+                            .background(Color(.systemBackground))
+                            .cornerRadius(12)
+                    }
                 }
             }
         }
@@ -905,31 +902,18 @@ struct ShareOptionsView: View {
         }
     }
 
-    private func shareAsLocaphoto() async {
-        isLoading = true
-
-        do {
-            let sharingService = SharingService()
-            let url = try await sharingService.createShareBundle(for: photo)
-
-            await MainActor.run {
-                onShare(url)
-                dismiss()
-                isLoading = false
-            }
-        } catch {
-            print("Failed to create .locaphoto: \(error)")
-            isLoading = false
-        }
-    }
-
     private func shareAsLFS(keyName: String) async {
         guard let pin = appState.currentPin else {
-            print("No PIN available")
+            await MainActor.run {
+                ToastManager.shared.showError("No PIN available")
+                dismiss()
+            }
             return
         }
 
-        isLoading = true
+        await MainActor.run {
+            isLoading = true
+        }
 
         do {
             let lfsService = LFSImportService()
@@ -942,7 +926,10 @@ struct ShareOptionsView: View {
             }
         } catch {
             print("Failed to create .lfs file: \(error)")
-            isLoading = false
+            await MainActor.run {
+                ToastManager.shared.showError("Failed to create .lfs file: \(error.localizedDescription)")
+                isLoading = false
+            }
         }
     }
 }
