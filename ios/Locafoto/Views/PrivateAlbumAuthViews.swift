@@ -159,6 +159,7 @@ struct PINEntryView: View {
     @State private var pin = ""
     @State private var error: String?
     @State private var attempts = 0
+    @State private var isAuthenticated = false
 
     let albumName: String
     let onVerify: (String) -> Bool
@@ -166,75 +167,90 @@ struct PINEntryView: View {
 
     var body: some View {
         NavigationView {
-            VStack(spacing: 30) {
-                // Header
-                VStack(spacing: 12) {
-                    Image(systemName: "lock.fill")
-                        .font(.system(size: 60))
-                        .foregroundColor(.locafotoPrimary)
+            ZStack {
+                if !isAuthenticated {
+                    VStack(spacing: 30) {
+                        // Header
+                        VStack(spacing: 12) {
+                            Image(systemName: "lock.fill")
+                                .font(.system(size: 60))
+                                .foregroundColor(.locafotoPrimary)
 
-                    Text("Enter PIN")
-                        .font(.title2)
-                        .fontWeight(.bold)
+                            Text("Enter PIN")
+                                .font(.title2)
+                                .fontWeight(.bold)
 
-                    Text("Enter your PIN to access \(albumName)")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal)
-                }
+                            Text("Enter your PIN to access \(albumName)")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal)
+                        }
 
-                // PIN dots
-                HStack(spacing: 16) {
-                    ForEach(0..<8, id: \.self) { index in
-                        Circle()
-                            .fill(index < pin.count ? Color.locafotoPrimary : Color.gray.opacity(0.3))
-                            .frame(width: 16, height: 16)
-                    }
-                }
-                .padding(.vertical)
+                        // PIN dots
+                        HStack(spacing: 16) {
+                            ForEach(0..<8, id: \.self) { index in
+                                Circle()
+                                    .fill(index < pin.count ? Color.locafotoPrimary : Color.gray.opacity(0.3))
+                                    .frame(width: 16, height: 16)
+                            }
+                        }
+                        .padding(.vertical)
 
-                // Error message
-                if let error = error {
-                    Text(error)
-                        .font(.caption)
-                        .foregroundColor(.red)
-                }
+                        // Error message
+                        if let error = error {
+                            Text(error)
+                                .font(.caption)
+                                .foregroundColor(.red)
+                        }
 
-                // Number pad
-                VStack(spacing: 16) {
-                    ForEach(0..<3) { row in
-                        HStack(spacing: 24) {
-                            ForEach(1...3, id: \.self) { col in
-                                let number = row * 3 + col
-                                NumberButton(number: "\(number)") {
-                                    appendDigit("\(number)")
+                        // Number pad
+                        VStack(spacing: 16) {
+                            ForEach(0..<3) { row in
+                                HStack(spacing: 24) {
+                                    ForEach(1...3, id: \.self) { col in
+                                        let number = row * 3 + col
+                                        NumberButton(number: "\(number)") {
+                                            appendDigit("\(number)")
+                                        }
+                                    }
+                                }
+                            }
+
+                            HStack(spacing: 24) {
+                                // Empty space
+                                Color.clear.frame(width: 70, height: 70)
+
+                                NumberButton(number: "0") {
+                                    appendDigit("0")
+                                }
+
+                                // Delete button
+                                Button(action: deleteDigit) {
+                                    Image(systemName: "delete.left.fill")
+                                        .font(.title2)
+                                        .foregroundColor(.primary)
+                                        .frame(width: 70, height: 70)
                                 }
                             }
                         }
+
+                        Spacer()
                     }
-
-                    HStack(spacing: 24) {
-                        // Empty space
-                        Color.clear.frame(width: 70, height: 70)
-
-                        NumberButton(number: "0") {
-                            appendDigit("0")
+                    .padding()
+                    .transition(.opacity)
+                } else {
+                    // Translucent "Ready" overlay - onSuccess already called, just need to dismiss sheet
+                    AuthenticationReadyOverlay(
+                        onDismiss: {
+                            dismiss() // Just dismiss, images already loaded
                         }
-
-                        // Delete button
-                        Button(action: deleteDigit) {
-                            Image(systemName: "delete.left.fill")
-                                .font(.title2)
-                                .foregroundColor(.primary)
-                                .frame(width: 70, height: 70)
-                        }
-                    }
+                    )
+                    .transition(.opacity.combined(with: .scale(scale: 0.95)))
+                    .interactiveDismissDisabled(false) // Allow drag-down dismissal
                 }
-
-                Spacer()
             }
-            .padding()
+            .animation(.spring(response: 0.4, dampingFraction: 0.8), value: isAuthenticated)
             .navigationTitle("Private Album")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -267,8 +283,12 @@ struct PINEntryView: View {
 
     private func verifyPIN() {
         if onVerify(pin) {
+            // Call onSuccess immediately to load images behind the overlay
             onSuccess()
-            dismiss()
+            // Then show the transparent overlay for the "peek" effect
+            withAnimation {
+                isAuthenticated = true
+            }
         } else {
             attempts += 1
             error = "Invalid PIN. \(max(0, 5 - attempts)) attempts remaining."
@@ -300,6 +320,83 @@ struct NumberButton: View {
     }
 }
 
+// MARK: - Authentication Ready Overlay
+
+struct AuthenticationReadyOverlay: View {
+    let onDismiss: () -> Void
+    
+    @Environment(\.dismiss) var dismiss
+    @State private var showCheckmark = false
+    @State private var checkmarkScale: CGFloat = 0.5
+    @State private var hasCalledOnDismiss = false
+    
+    var body: some View {
+        ZStack {
+            // Really transparent blurred background - allows content behind to show through very clearly
+            Rectangle()
+                .fill(.ultraThinMaterial.opacity(0.15))
+                .ignoresSafeArea()
+            
+            VStack(spacing: 24) {
+                Spacer()
+                
+                // Success checkmark with animation
+                ZStack {
+                    Circle()
+                        .fill(Color.locafotoPrimary.opacity(0.15))
+                        .frame(width: 100, height: 100)
+                    
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 60))
+                        .foregroundColor(.locafotoPrimary)
+                        .scaleEffect(showCheckmark ? 1.0 : 0.5)
+                        .opacity(showCheckmark ? 1.0 : 0.0)
+                }
+                .scaleEffect(checkmarkScale)
+                
+                // "Ready" message
+                VStack(spacing: 8) {
+                    Text("Ready")
+                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                        .foregroundColor(.primary)
+                    
+                    Text("Swipe down to continue")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+                .opacity(showCheckmark ? 1.0 : 0.0)
+                
+                Spacer()
+            }
+            .padding()
+        }
+        .background(Color.clear) // Ensure background is clear
+        .onAppear {
+            // Animate checkmark appearance
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.6)) {
+                checkmarkScale = 1.0
+            }
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                    showCheckmark = true
+                }
+            }
+        }
+        .onDisappear {
+            // Call onDismiss when view disappears (drag down)
+            handleDismiss()
+        }
+    }
+    
+    private func handleDismiss() {
+        // Only call once to prevent double-calling
+        guard !hasCalledOnDismiss else { return }
+        hasCalledOnDismiss = true
+        onDismiss()
+    }
+}
+
 // MARK: - Face ID Prompt View
 
 struct FaceIDPromptView: View {
@@ -309,65 +406,82 @@ struct FaceIDPromptView: View {
     let onCancel: () -> Void
 
     @State private var isAuthenticating = false
+    @State private var isAuthenticated = false
     @State private var error: String?
 
     var body: some View {
-        VStack(spacing: 30) {
-            Spacer()
+        ZStack {
+            // Main authentication view
+            if !isAuthenticated {
+                VStack(spacing: 30) {
+                    Spacer()
 
-            // Icon
-            Image(systemName: "faceid")
-                .font(.system(size: 80))
-                .foregroundColor(.locafotoPrimary)
+                    // Icon
+                    Image(systemName: "faceid")
+                        .font(.system(size: 80))
+                        .foregroundColor(.locafotoPrimary)
 
-            // Text
-            VStack(spacing: 8) {
-                Text("Face ID Required")
-                    .font(.title2)
-                    .fontWeight(.bold)
+                    // Text
+                    VStack(spacing: 8) {
+                        Text("Face ID Required")
+                            .font(.title2)
+                            .fontWeight(.bold)
 
-                Text("Authenticate to access \(albumName)")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-            }
-
-            if let error = error {
-                Text(error)
-                    .font(.caption)
-                    .foregroundColor(.red)
-            }
-
-            Spacer()
-
-            // Buttons
-            VStack(spacing: 12) {
-                Button(action: authenticate) {
-                    HStack {
-                        if isAuthenticating {
-                            ProgressView()
-                                .tint(.white)
-                        } else {
-                            Image(systemName: "faceid")
-                        }
-                        Text("Authenticate")
+                        Text("Authenticate to access \(albumName)")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
                     }
-                    .font(.headline)
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.locafotoPrimary)
-                    .cornerRadius(12)
-                }
-                .disabled(isAuthenticating)
 
-                Button("Cancel") {
-                    onCancel()
+                    if let error = error {
+                        Text(error)
+                            .font(.caption)
+                            .foregroundColor(.red)
+                    }
+
+                    Spacer()
+
+                    // Buttons
+                    VStack(spacing: 12) {
+                        Button(action: authenticate) {
+                            HStack {
+                                if isAuthenticating {
+                                    ProgressView()
+                                        .tint(.white)
+                                } else {
+                                    Image(systemName: "faceid")
+                                }
+                                Text("Authenticate")
+                            }
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.locafotoPrimary)
+                            .cornerRadius(12)
+                        }
+                        .disabled(isAuthenticating)
+
+                        Button("Cancel") {
+                            onCancel()
+                        }
+                        .foregroundColor(.secondary)
+                    }
+                    .padding(.horizontal)
                 }
-                .foregroundColor(.secondary)
+                .padding()
+                .transition(.opacity)
+            } else {
+                // Translucent "Ready" overlay
+                AuthenticationReadyOverlay(
+                    onDismiss: {
+                        onSuccess()
+                    }
+                )
+                .transition(.opacity.combined(with: .scale(scale: 0.95)))
+                .interactiveDismissDisabled(false) // Allow drag-down dismissal
             }
-            .padding(.horizontal)
         }
-        .padding()
+        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: isAuthenticated)
         .onAppear {
             authenticate()
         }
@@ -382,7 +496,12 @@ struct FaceIDPromptView: View {
             await MainActor.run {
                 isAuthenticating = false
                 if success {
+                    // Call onSuccess immediately to load images behind the overlay
                     onSuccess()
+                    // Then show the transparent overlay for the "peek" effect
+                    withAnimation {
+                        isAuthenticated = true
+                    }
                 } else {
                     error = "Authentication failed. Try again."
                 }

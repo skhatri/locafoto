@@ -634,6 +634,7 @@ struct AlbumDetailView: View {
                         }
                     },
                     onSuccess: {
+                        // Images will load immediately when auth succeeds, before overlay appears
                         isAuthenticated = true
                         loadPhotos()
                     },
@@ -648,6 +649,7 @@ struct AlbumDetailView: View {
                         pinService.verifyPIN(pin)
                     },
                     onSuccess: {
+                        // Images will load immediately when auth succeeds, before overlay appears
                         isAuthenticated = true
                         loadPhotos()
                     }
