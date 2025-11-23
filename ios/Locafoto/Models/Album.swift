@@ -1,5 +1,39 @@
 import Foundation
 
+/// Sorting options for albums
+enum AlbumSortOption: String, CaseIterable {
+    case modifiedDateDesc = "modified_desc"
+    case modifiedDateAsc = "modified_asc"
+    case createdDateDesc = "created_desc"
+    case createdDateAsc = "created_asc"
+    case nameAsc = "name_asc"
+    case nameDesc = "name_desc"
+    case photoCountDesc = "photo_count_desc"
+    case photoCountAsc = "photo_count_asc"
+
+    var displayName: String {
+        switch self {
+        case .modifiedDateDesc: return "Modified (Newest)"
+        case .modifiedDateAsc: return "Modified (Oldest)"
+        case .createdDateDesc: return "Created (Newest)"
+        case .createdDateAsc: return "Created (Oldest)"
+        case .nameAsc: return "Name (A-Z)"
+        case .nameDesc: return "Name (Z-A)"
+        case .photoCountDesc: return "Photos (Most)"
+        case .photoCountAsc: return "Photos (Least)"
+        }
+    }
+
+    var iconName: String {
+        switch self {
+        case .modifiedDateDesc, .modifiedDateAsc: return "clock.arrow.circlepath"
+        case .createdDateDesc, .createdDateAsc: return "calendar"
+        case .nameAsc, .nameDesc: return "textformat"
+        case .photoCountDesc, .photoCountAsc: return "photo.stack"
+        }
+    }
+}
+
 /// Album model for grouping photos with a key
 struct Album: Identifiable, Codable {
     let id: UUID

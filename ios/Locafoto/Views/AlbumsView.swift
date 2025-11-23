@@ -8,6 +8,12 @@ struct AlbumsView: View {
     @State private var albumToShare: Album?
     @State private var shareURLs: [URL] = []
     @State private var isPreparingShare = false
+    @State private var showSortOptions = false
+    @AppStorage("albumSortOption") private var albumSortOptionRaw = AlbumSortOption.modifiedDateDesc.rawValue
+
+    private var currentSortOption: AlbumSortOption {
+        AlbumSortOption(rawValue: albumSortOptionRaw) ?? .modifiedDateDesc
+    }
 
     var body: some View {
         NavigationView {
@@ -92,6 +98,28 @@ struct AlbumsView: View {
             }
             .navigationTitle("Albums")
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Menu {
+                        ForEach(AlbumSortOption.allCases, id: \.rawValue) { option in
+                            Button {
+                                albumSortOptionRaw = option.rawValue
+                                viewModel.applySorting()
+                            } label: {
+                                HStack {
+                                    Image(systemName: option.iconName)
+                                    Text(option.displayName)
+                                    if option.rawValue == albumSortOptionRaw {
+                                        Image(systemName: "checkmark")
+                                    }
+                                }
+                            }
+                        }
+                    } label: {
+                        Image(systemName: "arrow.up.arrow.down")
+                            .foregroundColor(.locafotoPrimary)
+                    }
+                }
+
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: { showCreateAlbum = true }) {
                         Image(systemName: "plus")
