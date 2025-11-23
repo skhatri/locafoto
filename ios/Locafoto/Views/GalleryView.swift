@@ -8,6 +8,7 @@ struct GalleryView: View {
     @EnvironmentObject var appState: AppState
     @State private var albums: [Album] = []
     @State private var showCreateAlbum = false
+    @AppStorage("albumSortOption") private var albumSortOptionRaw = AlbumSortOption.modifiedDateDesc.rawValue
 
     let columns = [
         GridItem(.adaptive(minimum: 100), spacing: 2)
@@ -264,16 +265,19 @@ struct GalleryView: View {
                     }
                 }
             }
+            .onChange(of: albumSortOptionRaw) { _ in
+                // Reload albums when sort option changes
+                Task {
+                    await loadAlbums()
+                }
+            }
         }
     }
 
     private func loadAlbums() async {
-        do {
-            try await albumService.loadAlbums()
-            albums = await albumService.getAllAlbums()
-        } catch {
-            print("Failed to load albums: \(error)")
-        }
+        // Use albumViewModel to load albums with sorting applied
+        await albumViewModel.loadAlbums()
+        albums = albumViewModel.albums
     }
 }
 
@@ -381,6 +385,7 @@ struct AlbumsListView: View {
     let albums: [Album]
 
     @AppStorage("allowDeleteNonEmptyAlbums") private var allowDeleteNonEmptyAlbums = false
+    @AppStorage("albumSortOption") private var albumSortOptionRaw = AlbumSortOption.modifiedDateDesc.rawValue
     @EnvironmentObject var appState: AppState
     @State private var albumToDelete: Album?
     @State private var showDeleteConfirmation = false
@@ -421,12 +426,22 @@ struct AlbumsListView: View {
         }
         .navigationTitle("Albums")
         .onAppear {
-            // Load fresh data from disk
+            // Load fresh data from disk with sorting
             Task {
-                try? await albumService.loadAlbums()
-                let freshAlbums = await albumService.getAllAlbums()
+                let viewModel = AlbumViewModel()
+                await viewModel.loadAlbums()
                 await MainActor.run {
-                    localAlbums = freshAlbums
+                    localAlbums = viewModel.albums
+                }
+            }
+        }
+        .onChange(of: albumSortOptionRaw) { _ in
+            // Reload albums when sort option changes
+            Task {
+                let viewModel = AlbumViewModel()
+                await viewModel.loadAlbums()
+                await MainActor.run {
+                    localAlbums = viewModel.albums
                 }
             }
         }
@@ -648,13 +663,25 @@ struct PhotoGalleryDetailView: View {
                 }
             }
         }
-        .sheet(isPresented: $showShareSheet) {
+        .sheet(isPresented: Binding(
+            get: { shareURL != nil && showShareSheet },
+            set: { newValue in
+                if !newValue {
+                    showShareSheet = false
+                    shareURL = nil
+                }
+            }
+        )) {
             if let url = shareURL {
                 ShareSheet(items: [url])
             }
         }
         .sheet(isPresented: $showShareOptions) {
-            ShareOptionsView(photo: currentPhoto) { shareURL = $0; showShareSheet = true }
+            ShareOptionsView(photo: currentPhoto) { url in
+                // Set URL first, then show sheet
+                shareURL = url
+                showShareSheet = true
+            }
         }
         .sheet(isPresented: $showAddToAlbum) {
             AddToAlbumSheet(photo: currentPhoto)
@@ -920,9 +947,13 @@ struct ShareOptionsView: View {
             let url = try await lfsService.createLFSFile(for: photo, keyName: keyName, pin: pin)
 
             await MainActor.run {
-                onShare(url)
-                dismiss()
                 isLoading = false
+                // Set URL and show sheet before dismissing
+                onShare(url)
+                // Small delay to ensure URL is set before dismissing
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                    dismiss()
+                }
             }
         } catch {
             print("Failed to create .lfs file: \(error)")

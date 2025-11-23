@@ -55,7 +55,15 @@ struct KeyLibraryView: View {
                 } message: { key in
                     deleteAlertMessage(for: key)
                 }
-                .sheet(isPresented: $showShareSheet) {
+                .sheet(isPresented: Binding(
+                    get: { shareURL != nil && showShareSheet },
+                    set: { newValue in
+                        if !newValue {
+                            showShareSheet = false
+                            shareURL = nil
+                        }
+                    }
+                )) {
                     if let url = shareURL {
                         KeyShareSheet(items: [url])
                     }
@@ -74,6 +82,7 @@ struct KeyLibraryView: View {
             let url = try await keyManagementService.exportKey(byName: key.name, pin: pin)
             
             await MainActor.run {
+                // Set URL first, then show sheet
                 shareURL = url
                 showShareSheet = true
             }

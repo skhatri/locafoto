@@ -74,7 +74,12 @@ class AlbumViewModel: ObservableObject {
     func createAlbum(name: String, keyName: String) async -> Album? {
         do {
             let album = try await albumService.createAlbum(name: name, keyName: keyName)
-            albums = await albumService.getAllAlbums()
+            // Reload and apply sorting
+            try await albumService.loadAlbums()
+            var loadedAlbums = await albumService.getAllAlbums()
+            let sortOptionRaw = UserDefaults.standard.string(forKey: "albumSortOption") ?? AlbumSortOption.modifiedDateDesc.rawValue
+            let sortOption = AlbumSortOption(rawValue: sortOptionRaw) ?? .modifiedDateDesc
+            albums = sortAlbums(loadedAlbums, by: sortOption)
             return album
         } catch {
             print("Failed to create album: \(error)")
@@ -86,7 +91,12 @@ class AlbumViewModel: ObservableObject {
     func deleteAlbum(_ album: Album) async {
         do {
             try await albumService.deleteAlbum(album.id)
-            albums.removeAll { $0.id == album.id }
+            // Reload and apply sorting
+            try await albumService.loadAlbums()
+            var loadedAlbums = await albumService.getAllAlbums()
+            let sortOptionRaw = UserDefaults.standard.string(forKey: "albumSortOption") ?? AlbumSortOption.modifiedDateDesc.rawValue
+            let sortOption = AlbumSortOption(rawValue: sortOptionRaw) ?? .modifiedDateDesc
+            albums = sortAlbums(loadedAlbums, by: sortOption)
         } catch {
             print("Failed to delete album: \(error)")
         }

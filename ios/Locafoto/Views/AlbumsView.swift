@@ -159,6 +159,12 @@ struct AlbumsView: View {
                     await viewModel.loadKeys()
                 }
             }
+            .onChange(of: albumSortOptionRaw) { _ in
+                // Reload albums when sort option changes
+                Task {
+                    await viewModel.loadAlbums()
+                }
+            }
         }
     }
 
