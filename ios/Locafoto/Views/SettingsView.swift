@@ -44,6 +44,7 @@ struct SettingsView: View {
     @AppStorage("thumbnailStyle") private var thumbnailStyleRaw = ThumbnailStyle.blurred.rawValue
     @AppStorage("allowDeleteNonEmptyAlbums") private var allowDeleteNonEmptyAlbums = false
     @AppStorage("albumSortOption") private var albumSortOptionRaw = AlbumSortOption.modifiedDateDesc.rawValue
+    @AppStorage("photoSortOption") private var photoSortOptionRaw = PhotoSortOption.captureDateDesc.rawValue
     @State private var photoAccessStatus: String = "Unknown"
     @State private var receivedFiles: [ReceivedFileInfo] = []
     @State private var orphanedPhotos: [OrphanedPhotoInfo] = []
@@ -174,6 +175,23 @@ struct SettingsView: View {
                     .pickerStyle(.menu)
 
                     Text("Choose how albums are sorted in the Albums view")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+
+                Section(header: Text("Photo Sorting")) {
+                    Picker("Sort By", selection: $photoSortOptionRaw) {
+                        ForEach(PhotoSortOption.allCases, id: \.rawValue) { option in
+                            HStack {
+                                Image(systemName: option.iconName)
+                                Text(option.displayName)
+                            }
+                            .tag(option.rawValue)
+                        }
+                    }
+                    .pickerStyle(.menu)
+
+                    Text("Choose how photos are sorted in albums and gallery")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }

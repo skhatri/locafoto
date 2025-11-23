@@ -1,5 +1,34 @@
 import Foundation
 
+/// Sorting options for photos within albums
+enum PhotoSortOption: String, CaseIterable {
+    case captureDateDesc = "capture_desc"
+    case captureDateAsc = "capture_asc"
+    case importDateDesc = "import_desc"
+    case importDateAsc = "import_asc"
+    case sizeDesc = "size_desc"
+    case sizeAsc = "size_asc"
+
+    var displayName: String {
+        switch self {
+        case .captureDateDesc: return "Capture Date (Newest)"
+        case .captureDateAsc: return "Capture Date (Oldest)"
+        case .importDateDesc: return "Import Date (Newest)"
+        case .importDateAsc: return "Import Date (Oldest)"
+        case .sizeDesc: return "Size (Largest)"
+        case .sizeAsc: return "Size (Smallest)"
+        }
+    }
+
+    var iconName: String {
+        switch self {
+        case .captureDateDesc, .captureDateAsc: return "camera"
+        case .importDateDesc, .importDateAsc: return "square.and.arrow.down"
+        case .sizeDesc, .sizeAsc: return "externaldrive"
+        }
+    }
+}
+
 /// Sorting options for albums
 enum AlbumSortOption: String, CaseIterable {
     case modifiedDateDesc = "modified_desc"
