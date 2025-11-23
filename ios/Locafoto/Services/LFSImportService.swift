@@ -189,6 +189,30 @@ actor LFSImportService {
         return fileURL
     }
 
+    /// Create a share bundle for an entire album (all photos as .lfs + .lfkey)
+    func createAlbumShareBundle(for album: Album, pin: String) async throws -> [URL] {
+        var shareURLs: [URL] = []
+
+        // Get all photos in the album
+        let photos = await PhotoStore.shared.getPhotos(forAlbum: album.id)
+
+        guard !photos.isEmpty else {
+            throw LFSError.importFailed("Album has no photos to share")
+        }
+
+        // Export the album's encryption key as .lfkey
+        let keyURL = try await keyManagementService.exportKey(byName: album.keyName, pin: pin)
+        shareURLs.append(keyURL)
+
+        // Export each photo as .lfs file
+        for photo in photos {
+            let lfsURL = try await createLFSFile(for: photo, keyName: album.keyName, pin: pin)
+            shareURLs.append(lfsURL)
+        }
+
+        return shareURLs
+    }
+
     /// Generate thumbnail from photo data
     private func generateThumbnail(from data: Data, size: CGFloat = 200) throws -> Data {
         guard let image = UIImage(data: data) else {
