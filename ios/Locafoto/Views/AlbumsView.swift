@@ -460,6 +460,7 @@ struct AlbumDetailView: View {
     @State private var shareURLs: [URL] = []
     @State private var isPreparingShare = false
     @EnvironmentObject var appState: AppState
+    @AppStorage("photoSortOption") private var photoSortOptionRaw = PhotoSortOption.captureDateDesc.rawValue
 
     private let albumService = AlbumService.shared
     private let biometricService = BiometricService()
@@ -615,6 +616,11 @@ struct AlbumDetailView: View {
                 loadPhotos()
             }
         }
+        .onChange(of: photoSortOptionRaw) { _ in
+            if isAuthenticated {
+                loadPhotos()
+            }
+        }
         .sheet(isPresented: $showAuthSheet) {
             if biometricService.isFaceIDAvailable() {
                 FaceIDPromptView(
@@ -673,7 +679,27 @@ struct AlbumDetailView: View {
 
     private func loadPhotos() {
         Task {
-            albumPhotos = await PhotoStore.shared.getPhotos(forAlbum: album.id)
+            var photos = await PhotoStore.shared.getPhotos(forAlbum: album.id)
+            photos = sortPhotos(photos)
+            albumPhotos = photos
+        }
+    }
+
+    private func sortPhotos(_ photos: [Photo]) -> [Photo] {
+        let sortOption = PhotoSortOption(rawValue: photoSortOptionRaw) ?? .captureDateDesc
+        switch sortOption {
+        case .captureDateDesc:
+            return photos.sorted { $0.captureDate > $1.captureDate }
+        case .captureDateAsc:
+            return photos.sorted { $0.captureDate < $1.captureDate }
+        case .importDateDesc:
+            return photos.sorted { $0.importDate > $1.importDate }
+        case .importDateAsc:
+            return photos.sorted { $0.importDate < $1.importDate }
+        case .sizeDesc:
+            return photos.sorted { $0.originalSize > $1.originalSize }
+        case .sizeAsc:
+            return photos.sorted { $0.originalSize < $1.originalSize }
         }
     }
 

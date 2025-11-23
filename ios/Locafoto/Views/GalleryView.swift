@@ -9,6 +9,7 @@ struct GalleryView: View {
     @State private var albums: [Album] = []
     @State private var showCreateAlbum = false
     @AppStorage("albumSortOption") private var albumSortOptionRaw = AlbumSortOption.modifiedDateDesc.rawValue
+    @AppStorage("photoSortOption") private var photoSortOptionRaw = PhotoSortOption.captureDateDesc.rawValue
 
     let columns = [
         GridItem(.adaptive(minimum: 100), spacing: 2)
@@ -269,6 +270,12 @@ struct GalleryView: View {
                 // Reload albums when sort option changes
                 Task {
                     await loadAlbums()
+                }
+            }
+            .onChange(of: photoSortOptionRaw) { _ in
+                // Reload photos when sort option changes
+                Task {
+                    await viewModel.loadPhotos()
                 }
             }
         }
