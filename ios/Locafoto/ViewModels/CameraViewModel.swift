@@ -18,6 +18,7 @@ class CameraViewModel: NSObject, ObservableObject {
     @Published var selectedAlbumId: UUID?
     @Published var showKeySelection = false
     @Published var isUsingFrontCamera = false
+    @Published var selectedFilter: CameraFilterPreset = .none
 
     private var photoOutput = AVCapturePhotoOutput()
     private var cameraService: CameraService?
@@ -25,6 +26,7 @@ class CameraViewModel: NSObject, ObservableObject {
     private var keyManagementService = KeyManagementService()
     private var trackingService = LFSFileTrackingService()
     private var albumService = AlbumService.shared
+    private var filterService = FilterService()
 
     /// Check camera permissions
     func checkPermissions() async {
@@ -153,8 +155,15 @@ class CameraViewModel: NSObject, ObservableObject {
             let encryptionKey = try await keyManagementService.getKey(byName: keyName, pin: pin)
 
             // Capture photo data
-            guard let photoData = try await cameraService?.capturePhoto(output: photoOutput) else {
+            guard var photoData = try await cameraService?.capturePhoto(output: photoOutput) else {
                 throw CameraError.captureFailed
+            }
+
+            // Apply filter if selected
+            if selectedFilter != .none {
+                if let filteredData = filterService.applyFilter(selectedFilter, toPhotoData: photoData) {
+                    photoData = filteredData
+                }
             }
 
             // Generate thumbnail based on style setting
