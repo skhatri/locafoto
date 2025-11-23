@@ -1,6 +1,7 @@
 import CoreImage
 import CoreImage.CIFilterBuiltins
 import UIKit
+import Metal
 
 /// Filter presets available for camera
 enum CameraFilterPreset: String, CaseIterable, Identifiable {

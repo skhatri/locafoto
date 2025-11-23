@@ -27,6 +27,8 @@
 		5E4378492ED221CF00C411EA /* PrivateAlbumAuthViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E4378482ED221CF00C411EA /* PrivateAlbumAuthViews.swift */; };
 		5E43784C2ED221E600C411EA /* PrivateAlbumKeyService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E43784A2ED221E600C411EA /* PrivateAlbumKeyService.swift */; };
 		5E43784D2ED221E600C411EA /* PrivateAlbumPINService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E43784B2ED221E600C411EA /* PrivateAlbumPINService.swift */; };
+		5E43784F2ED2DBE500C411EA /* FilteredPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E43784E2ED2DBE500C411EA /* FilteredPreviewView.swift */; };
+		5E4378512ED2DBF400C411EA /* FilterService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E4378502ED2DBF400C411EA /* FilterService.swift */; };
 		5FF444E4A1558147330590F0 /* LFSImportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAB25DC76A3584DAD8695E6C /* LFSImportService.swift */; };
 		6CD73670D8AC0B9EA68B4B34 /* LFSLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEC1AA6831EFD39F431E88DD /* LFSLibraryView.swift */; };
 		8DC3E684AC931000B5CBB3E3 /* KeyManagementService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55D3A223DDE51A08C2B1B45F /* KeyManagementService.swift */; };
@@ -68,6 +70,8 @@
 		5E4378482ED221CF00C411EA /* PrivateAlbumAuthViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivateAlbumAuthViews.swift; sourceTree = "<group>"; };
 		5E43784A2ED221E600C411EA /* PrivateAlbumKeyService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivateAlbumKeyService.swift; sourceTree = "<group>"; };
 		5E43784B2ED221E600C411EA /* PrivateAlbumPINService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivateAlbumPINService.swift; sourceTree = "<group>"; };
+		5E43784E2ED2DBE500C411EA /* FilteredPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilteredPreviewView.swift; sourceTree = "<group>"; };
+		5E4378502ED2DBF400C411EA /* FilterService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterService.swift; sourceTree = "<group>"; };
 		6249E4A6E8D2FCA965E52BE2 /* EncryptionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EncryptionService.swift; sourceTree = "<group>"; };
 		6872FCB96BE94D959DA7E7F5 /* CameraViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraViewModel.swift; sourceTree = "<group>"; };
 		81B77F5B270FBFC9720C6C88 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -75,6 +79,7 @@
 		8534FE1A1E900B69A613CD9C /* PINSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PINSetupView.swift; sourceTree = "<group>"; };
 		9A594221EF7FC97D6F18FF21 /* GalleryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GalleryView.swift; sourceTree = "<group>"; };
 		9ABC1545DEA6A8B699F0B524 /* PhotoImportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoImportService.swift; sourceTree = "<group>"; };
+		9C0D1E2F3A4B5C6D7E8F9A0B /* ToastView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToastView.swift; sourceTree = "<group>"; };
 		A17BEBA2770E632ED8A207EE /* ImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportView.swift; sourceTree = "<group>"; };
 		CAB25DC76A3584DAD8695E6C /* LFSImportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LFSImportService.swift; sourceTree = "<group>"; };
 		CB486520A75BD2C446B5C9CA /* KeyLibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyLibraryView.swift; sourceTree = "<group>"; };
@@ -85,7 +90,6 @@
 		FA06E6851E41EDF17B5F10C8 /* StorageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageService.swift; sourceTree = "<group>"; };
 		FDAC2F91EC0BFE8FC3986896 /* CameraView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraView.swift; sourceTree = "<group>"; };
 		FEC1AA6831EFD39F431E88DD /* LFSLibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LFSLibraryView.swift; sourceTree = "<group>"; };
-		9C0D1E2F3A4B5C6D7E8F9A0B /* ToastView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToastView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -134,6 +138,7 @@
 		564EAF51B7DD4639ADD9B985 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				5E4378502ED2DBF400C411EA /* FilterService.swift */,
 				5E43784A2ED221E600C411EA /* PrivateAlbumKeyService.swift */,
 				5E43784B2ED221E600C411EA /* PrivateAlbumPINService.swift */,
 				5E4378462ED1FEB900C411EA /* BiometricService.swift */,
@@ -171,6 +176,7 @@
 		C454586A1F4E28C340BDC1AD /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				5E43784E2ED2DBE500C411EA /* FilteredPreviewView.swift */,
 				5E4378482ED221CF00C411EA /* PrivateAlbumAuthViews.swift */,
 				5E4378442ED185B500C411EA /* AlbumsView.swift */,
 				FDAC2F91EC0BFE8FC3986896 /* CameraView.swift */,
@@ -282,6 +288,7 @@
 				0A1B2C3D4E5F6A7B8C9D0E3F /* ColorTheme.swift in Sources */,
 				5E4378492ED221CF00C411EA /* PrivateAlbumAuthViews.swift in Sources */,
 				D303F800CF9B73A5E8D2125A /* LFSFile.swift in Sources */,
+				5E43784F2ED2DBE500C411EA /* FilteredPreviewView.swift in Sources */,
 				5E4378412ED185A800C411EA /* AlbumService.swift in Sources */,
 				20D11F43EC75D1131B6DF211 /* Photo.swift in Sources */,
 				0F4666432364FCF5826ACF4D /* CameraService.swift in Sources */,
@@ -294,6 +301,7 @@
 				0A1B2C3D4E5F6A7B8C9D0E1F /* SeedDataService.swift in Sources */,
 				0B28AAFDFC6AE865F68F3171 /* SharingService.swift in Sources */,
 				A649C8EFCB689AA992E36953 /* StorageService.swift in Sources */,
+				5E4378512ED2DBF400C411EA /* FilterService.swift in Sources */,
 				5E4378452ED185B500C411EA /* AlbumsView.swift in Sources */,
 				1C207A747CDC8A06AE9D6970 /* CameraViewModel.swift in Sources */,
 				5E43784C2ED221E600C411EA /* PrivateAlbumKeyService.swift in Sources */,

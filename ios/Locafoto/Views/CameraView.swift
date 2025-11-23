@@ -17,7 +17,8 @@ struct CameraView: View {
                 if viewModel.isCameraReady {
                     FilteredPreviewView(
                         session: viewModel.captureSession,
-                        currentFilter: $viewModel.selectedFilter
+                        currentFilter: $viewModel.selectedFilter,
+                        isUsingFrontCamera: $viewModel.isUsingFrontCamera
                     )
                     .ignoresSafeArea()
 

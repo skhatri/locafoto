@@ -165,6 +165,13 @@ class CameraViewModel: NSObject, ObservableObject {
                     photoData = filteredData
                 }
             }
+            
+            // Mirror front camera photos horizontally (selfie mode)
+            if isUsingFrontCamera {
+                if let mirroredData = mirrorImageHorizontally(photoData) {
+                    photoData = mirroredData
+                }
+            }
 
             // Generate thumbnail based on style setting
             let styleRaw = UserDefaults.standard.integer(forKey: "thumbnailStyle")
@@ -273,6 +280,24 @@ class CameraViewModel: NSObject, ObservableObject {
         }
 
         return UIImage(cgImage: cgImage)
+    }
+    
+    /// Mirror image horizontally (for front camera selfies)
+    private func mirrorImageHorizontally(_ data: Data) -> Data? {
+        guard let image = UIImage(data: data) else { return nil }
+        guard let ciImage = CIImage(image: image) else { return nil }
+        
+        let context = CIContext()
+        let mirrorTransform = CGAffineTransform(scaleX: -1, y: 1)
+        let translationX = ciImage.extent.width + ciImage.extent.origin.x * 2
+        let mirroredImage = ciImage.transformed(by: mirrorTransform.concatenating(CGAffineTransform(translationX: translationX, y: 0)))
+        
+        guard let cgImage = context.createCGImage(mirroredImage, from: mirroredImage.extent) else {
+            return nil
+        }
+        
+        let mirroredUIImage = UIImage(cgImage: cgImage)
+        return mirroredUIImage.jpegData(compressionQuality: 0.9) ?? mirroredUIImage.pngData()
     }
 }
 
