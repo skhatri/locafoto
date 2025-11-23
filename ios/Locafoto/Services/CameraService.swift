@@ -116,6 +116,30 @@ actor CameraService: NSObject {
                     settings = AVCapturePhotoSettings()
                     settings.isHighResolutionPhotoEnabled = true
                 }
+                
+                // Set photo orientation to portrait
+                if let connection = output.connection(with: .video) {
+                    if connection.isVideoOrientationSupported {
+                        // Get current device orientation
+                        let deviceOrientation = UIDevice.current.orientation
+                        let photoOrientation: AVCaptureVideoOrientation
+                        
+                        switch deviceOrientation {
+                        case .portrait:
+                            photoOrientation = .portrait
+                        case .portraitUpsideDown:
+                            photoOrientation = .portraitUpsideDown
+                        case .landscapeLeft:
+                            photoOrientation = .landscapeRight
+                        case .landscapeRight:
+                            photoOrientation = .landscapeLeft
+                        default:
+                            photoOrientation = .portrait
+                        }
+                        
+                        connection.videoOrientation = photoOrientation
+                    }
+                }
 
                 output.capturePhoto(with: settings, delegate: self)
             }

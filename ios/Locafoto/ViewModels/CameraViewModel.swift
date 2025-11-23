@@ -166,12 +166,9 @@ class CameraViewModel: NSObject, ObservableObject {
                 }
             }
             
-            // Mirror front camera photos horizontally (selfie mode)
-            if isUsingFrontCamera {
-                if let mirroredData = mirrorImageHorizontally(photoData) {
-                    photoData = mirroredData
-                }
-            }
+            // Note: We don't mirror saved photos - AVCapturePhotoOutput handles orientation via EXIF
+            // The preview is mirrored for user experience, but saved photos should match standard camera behavior
+            // If user wants mirrored selfies, they can flip in post-processing
 
             // Generate thumbnail based on style setting
             let styleRaw = UserDefaults.standard.integer(forKey: "thumbnailStyle")
@@ -282,22 +279,71 @@ class CameraViewModel: NSObject, ObservableObject {
         return UIImage(cgImage: cgImage)
     }
     
-    /// Mirror image horizontally (for front camera selfies)
+    /// Fix orientation and mirror for front camera selfies
     private func mirrorImageHorizontally(_ data: Data) -> Data? {
         guard let image = UIImage(data: data) else { return nil }
-        guard let ciImage = CIImage(image: image) else { return nil }
         
-        let context = CIContext()
+        // First, normalize the image orientation by drawing it
+        // This ensures we're working with the actual pixel data, not EXIF orientation
+        let size: CGSize
+        if image.imageOrientation == .left || image.imageOrientation == .right || 
+           image.imageOrientation == .leftMirrored || image.imageOrientation == .rightMirrored {
+            // Swap width/height for rotated images
+            size = CGSize(width: image.size.height, height: image.size.width)
+        } else {
+            size = image.size
+        }
+        
+        UIGraphicsBeginImageContextWithOptions(size, true, image.scale)
+        guard let context = UIGraphicsGetCurrentContext() else {
+            UIGraphicsEndImageContext()
+            return nil
+        }
+        
+        // Draw image respecting its orientation
+        context.saveGState()
+        context.translateBy(x: size.width / 2, y: size.height / 2)
+        
+        // Apply orientation transform
+        switch image.imageOrientation {
+        case .right:
+            context.rotate(by: .pi / 2)
+        case .left:
+            context.rotate(by: -.pi / 2)
+        case .down, .downMirrored:
+            context.rotate(by: .pi)
+        default:
+            break
+        }
+        
+        // Mirror if needed (for mirrored orientations)
+        if image.imageOrientation == .upMirrored || image.imageOrientation == .downMirrored ||
+           image.imageOrientation == .leftMirrored || image.imageOrientation == .rightMirrored {
+            context.scaleBy(x: -1, y: 1)
+        }
+        
+        context.translateBy(x: -image.size.width / 2, y: -image.size.height / 2)
+        image.draw(in: CGRect(origin: .zero, size: image.size))
+        context.restoreGState()
+        
+        var normalizedImage = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+        
+        guard let normalized = normalizedImage else { return nil }
+        
+        // Now mirror horizontally for front camera selfie
+        guard let ciImage = CIImage(image: normalized) else { return nil }
+        let ciContext = CIContext()
         let mirrorTransform = CGAffineTransform(scaleX: -1, y: 1)
         let translationX = ciImage.extent.width + ciImage.extent.origin.x * 2
         let mirroredImage = ciImage.transformed(by: mirrorTransform.concatenating(CGAffineTransform(translationX: translationX, y: 0)))
         
-        guard let cgImage = context.createCGImage(mirroredImage, from: mirroredImage.extent) else {
+        guard let cgImage = ciContext.createCGImage(mirroredImage, from: mirroredImage.extent) else {
             return nil
         }
         
-        let mirroredUIImage = UIImage(cgImage: cgImage)
-        return mirroredUIImage.jpegData(compressionQuality: 0.9) ?? mirroredUIImage.pngData()
+        let finalImage = UIImage(cgImage: cgImage, scale: image.scale, orientation: .up)
+        return finalImage.jpegData(compressionQuality: 0.9)
     }
 }
 

@@ -64,16 +64,31 @@ final class FilterService {
     func applyFilter(_ preset: CameraFilterPreset, toPhotoData data: Data) -> Data? {
         guard preset != .none else { return data }
 
-        guard let ciImage = CIImage(data: data) else { return nil }
+        guard let uiImage = UIImage(data: data) else { return nil }
+
+        // Normalize image by drawing it - this applies the orientation to pixel data
+        // UIImage.draw() automatically handles orientation
+        let size = uiImage.size
+        UIGraphicsBeginImageContextWithOptions(size, false, uiImage.scale)
+        uiImage.draw(in: CGRect(origin: .zero, size: size))
+        guard let normalizedImage = UIGraphicsGetImageFromCurrentImageContext() else {
+            UIGraphicsEndImageContext()
+            return nil
+        }
+        UIGraphicsEndImageContext()
+        
+        // Apply filter to normalized image
+        guard let ciImage = CIImage(image: normalizedImage) else { return nil }
         let filteredImage = applyFilter(preset, to: ciImage)
 
-        // Render to CGImage then to JPEG
+        // Render to CGImage then to JPEG with original orientation preserved
         guard let cgImage = context.createCGImage(filteredImage, from: filteredImage.extent) else {
             return nil
         }
 
-        let uiImage = UIImage(cgImage: cgImage)
-        return uiImage.jpegData(compressionQuality: 0.9)
+        // Image was already normalized, so use .up orientation
+        let finalImage = UIImage(cgImage: cgImage, scale: uiImage.scale, orientation: .up)
+        return finalImage.jpegData(compressionQuality: 0.9)
     }
 
     /// Create CGImage from filtered CIImage for preview rendering

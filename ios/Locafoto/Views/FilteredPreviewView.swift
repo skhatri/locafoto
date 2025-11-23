@@ -54,7 +54,12 @@ class MetalPreviewView: MTKView {
     }
 
     var filterPreset: CameraFilterPreset = .none
-    var isUsingFrontCamera: Bool = false
+    var isUsingFrontCamera: Bool = false {
+        didSet {
+            // Update video orientation on connection after camera switch
+            updateVideoConnectionOrientation()
+        }
+    }
     var onFrameProcessed: ((CIImage) -> Void)?
 
     private var videoOutput: AVCaptureVideoDataOutput?
@@ -189,6 +194,37 @@ class MetalPreviewView: MTKView {
         isPaused = false
     }
 
+    private func updateVideoConnectionOrientation() {
+        guard let videoOutput = videoOutput,
+              let connection = videoOutput.connection(with: .video) else { return }
+
+        if connection.isVideoOrientationSupported {
+            // Get current device orientation
+            let deviceOrientation = UIDevice.current.orientation
+            let videoOrientation: AVCaptureVideoOrientation
+
+            switch deviceOrientation {
+            case .portrait:
+                videoOrientation = .portrait
+            case .portraitUpsideDown:
+                videoOrientation = .portraitUpsideDown
+            case .landscapeLeft:
+                videoOrientation = .landscapeRight
+            case .landscapeRight:
+                videoOrientation = .landscapeLeft
+            default:
+                videoOrientation = .portrait
+            }
+
+            connection.videoOrientation = videoOrientation
+        }
+
+        // Update mirroring for front camera
+        if connection.isVideoMirroringSupported {
+            connection.isVideoMirrored = isUsingFrontCamera
+        }
+    }
+
     private func render(_ ciImage: CIImage) {
         // Ensure Metal context and command queue are initialized
         guard let commandQueue = commandQueue,
@@ -252,35 +288,9 @@ extension MetalPreviewView: AVCaptureVideoDataOutputSampleBufferDelegate {
         // Create CIImage from pixel buffer
         var ciImage = CIImage(cvPixelBuffer: pixelBuffer)
         
-        // Get the video orientation from connection
-        let videoOrientation = connection.videoOrientation
-        
-        // Rotate image to match desired orientation
-        // Camera sensors are mounted in landscape, so we need to rotate for portrait display
-        let rotationAngle: CGFloat
-        switch videoOrientation {
-        case .portrait:
-            rotationAngle = .pi / 2  // Rotate 90° clockwise
-        case .portraitUpsideDown:
-            rotationAngle = -.pi / 2  // Rotate 90° counter-clockwise
-        case .landscapeRight:
-            rotationAngle = 0  // No rotation needed
-        case .landscapeLeft:
-            rotationAngle = .pi  // Rotate 180°
-        @unknown default:
-            rotationAngle = .pi / 2  // Default to portrait
-        }
-        
-        // Apply rotation if needed
-        if rotationAngle != 0 {
-            let centerX = ciImage.extent.midX
-            let centerY = ciImage.extent.midY
-            let transform = CGAffineTransform(translationX: -centerX, y: -centerY)
-                .rotated(by: rotationAngle)
-                .translatedBy(x: centerX, y: centerY)
-            ciImage = ciImage.transformed(by: transform)
-        }
-        
+        // Note: connection.videoOrientation already handles rotation of the pixel buffer
+        // No manual rotation needed here
+
         // Mirror horizontally for front camera (selfie mode)
         if isUsingFrontCamera {
             let mirrorTransform = CGAffineTransform(scaleX: -1, y: 1)
