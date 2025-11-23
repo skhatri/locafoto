@@ -43,6 +43,7 @@ struct SettingsView: View {
     @AppStorage("generateThumbnails") private var generateThumbnails = true
     @AppStorage("thumbnailStyle") private var thumbnailStyleRaw = ThumbnailStyle.blurred.rawValue
     @AppStorage("allowDeleteNonEmptyAlbums") private var allowDeleteNonEmptyAlbums = false
+    @AppStorage("albumSortOption") private var albumSortOptionRaw = AlbumSortOption.modifiedDateDesc.rawValue
     @State private var photoAccessStatus: String = "Unknown"
     @State private var receivedFiles: [ReceivedFileInfo] = []
     @State private var orphanedPhotos: [OrphanedPhotoInfo] = []
@@ -156,6 +157,23 @@ struct SettingsView: View {
                     Toggle("Allow Deleting Non-Empty Albums", isOn: $allowDeleteNonEmptyAlbums)
 
                     Text("When enabled, you can delete albums that contain photos. Photos will also be deleted.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+
+                Section(header: Text("Album Sorting")) {
+                    Picker("Sort By", selection: $albumSortOptionRaw) {
+                        ForEach(AlbumSortOption.allCases, id: \.rawValue) { option in
+                            HStack {
+                                Image(systemName: option.iconName)
+                                Text(option.displayName)
+                            }
+                            .tag(option.rawValue)
+                        }
+                    }
+                    .pickerStyle(.menu)
+
+                    Text("Choose how albums are sorted in the Albums view")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }

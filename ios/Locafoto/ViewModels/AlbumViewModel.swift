@@ -9,19 +9,55 @@ class AlbumViewModel: ObservableObject {
     private let albumService = AlbumService.shared
     private let keyManagementService = KeyManagementService()
 
-    /// Load all albums
+    /// Load all albums and apply sorting
     func loadAlbums() async {
         isLoading = true
 
         do {
             try await albumService.loadAlbums()
-            albums = await albumService.getAllAlbums()
+            var loadedAlbums = await albumService.getAllAlbums()
+
+            // Apply sorting based on user preference
+            let sortOptionRaw = UserDefaults.standard.string(forKey: "albumSortOption") ?? AlbumSortOption.modifiedDateDesc.rawValue
+            let sortOption = AlbumSortOption(rawValue: sortOptionRaw) ?? .modifiedDateDesc
+            loadedAlbums = sortAlbums(loadedAlbums, by: sortOption)
+
+            albums = loadedAlbums
         } catch {
             print("Failed to load albums: \(error)")
             albums = []
         }
 
         isLoading = false
+    }
+
+    /// Sort albums by the specified option
+    func sortAlbums(_ albums: [Album], by option: AlbumSortOption) -> [Album] {
+        switch option {
+        case .modifiedDateDesc:
+            return albums.sorted { $0.modifiedDate > $1.modifiedDate }
+        case .modifiedDateAsc:
+            return albums.sorted { $0.modifiedDate < $1.modifiedDate }
+        case .createdDateDesc:
+            return albums.sorted { $0.createdDate > $1.createdDate }
+        case .createdDateAsc:
+            return albums.sorted { $0.createdDate < $1.createdDate }
+        case .nameAsc:
+            return albums.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        case .nameDesc:
+            return albums.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedDescending }
+        case .photoCountDesc:
+            return albums.sorted { $0.photoCount > $1.photoCount }
+        case .photoCountAsc:
+            return albums.sorted { $0.photoCount < $1.photoCount }
+        }
+    }
+
+    /// Apply current sort preference to albums
+    func applySorting() {
+        let sortOptionRaw = UserDefaults.standard.string(forKey: "albumSortOption") ?? AlbumSortOption.modifiedDateDesc.rawValue
+        let sortOption = AlbumSortOption(rawValue: sortOptionRaw) ?? .modifiedDateDesc
+        albums = sortAlbums(albums, by: sortOption)
     }
 
     /// Load available keys
