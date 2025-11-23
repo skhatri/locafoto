@@ -15,8 +15,11 @@ struct CameraView: View {
             ZStack {
                 // Camera Preview
                 if viewModel.isCameraReady {
-                    CameraPreviewView(session: viewModel.captureSession)
-                        .ignoresSafeArea()
+                    FilteredPreviewView(
+                        session: viewModel.captureSession,
+                        currentFilter: $viewModel.selectedFilter
+                    )
+                    .ignoresSafeArea()
 
                     VStack {
                         // Top controls: album selector and flip button
@@ -86,6 +89,34 @@ struct CameraView: View {
                         }
 
                         Spacer()
+
+                        // Filter selector
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 12) {
+                                ForEach(CameraFilterPreset.allCases) { preset in
+                                    Button(action: {
+                                        viewModel.selectedFilter = preset
+                                    }) {
+                                        VStack(spacing: 4) {
+                                            Image(systemName: preset.icon)
+                                                .font(.system(size: 20))
+                                            Text(preset.rawValue)
+                                                .font(.caption2)
+                                        }
+                                        .frame(width: 60, height: 50)
+                                        .background(
+                                            viewModel.selectedFilter == preset
+                                                ? Color.locafotoPrimary.opacity(0.8)
+                                                : Color.black.opacity(0.3)
+                                        )
+                                        .foregroundColor(.white)
+                                        .cornerRadius(10)
+                                    }
+                                }
+                            }
+                            .padding(.horizontal)
+                        }
+                        .padding(.bottom, 20)
 
                         // Ultra-modern capture button
                         Button(action: {
