@@ -726,59 +726,120 @@ struct PhotoDetailView: View {
     @State private var isLoading = true
     @State private var scale: CGFloat = 1.0
     @State private var lastScale: CGFloat = 1.0
+    @State private var offset: CGSize = .zero
+    @State private var lastOffset: CGSize = .zero
 
     var body: some View {
-        ZStack {
-            Color.black.ignoresSafeArea()
+        GeometryReader { geometry in
+            ZStack {
+                Color.black.ignoresSafeArea()
 
-            if let image = fullImage {
-                Image(uiImage: image)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .scaleEffect(scale)
-                    .gesture(
-                        MagnificationGesture()
-                            .onChanged { value in
-                                scale = lastScale * value
-                            }
-                            .onEnded { _ in
-                                lastScale = scale
-                                // Reset to bounds
-                                if scale < 1 {
-                                    withAnimation {
-                                        scale = 1
-                                        lastScale = 1
+                if let image = fullImage {
+                    Image(uiImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .scaleEffect(scale)
+                        .offset(offset)
+                        .gesture(
+                            SimultaneousGesture(
+                                MagnificationGesture()
+                                    .onChanged { value in
+                                        let newScale = lastScale * value
+                                        scale = min(max(newScale, 0.5), 5.0)
                                     }
-                                } else if scale > 4 {
-                                    withAnimation {
-                                        scale = 4
-                                        lastScale = 4
+                                    .onEnded { _ in
+                                        lastScale = scale
+                                        // Reset to bounds
+                                        if scale < 1 {
+                                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                                scale = 1
+                                                lastScale = 1
+                                                offset = .zero
+                                                lastOffset = .zero
+                                            }
+                                        } else if scale > 4 {
+                                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                                scale = 4
+                                                lastScale = 4
+                                            }
+                                        }
+                                        // Clamp offset after zooming
+                                        clampOffset(in: geometry.size)
+                                    },
+                                DragGesture()
+                                    .onChanged { value in
+                                        if scale > 1 {
+                                            offset = CGSize(
+                                                width: lastOffset.width + value.translation.width,
+                                                height: lastOffset.height + value.translation.height
+                                            )
+                                        }
                                     }
+                                    .onEnded { _ in
+                                        lastOffset = offset
+                                        clampOffset(in: geometry.size)
+                                    }
+                            )
+                        )
+                        .onTapGesture(count: 2) { location in
+                            // Double tap to toggle zoom
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                if scale > 1 {
+                                    // Reset to normal
+                                    scale = 1
+                                    lastScale = 1
+                                    offset = .zero
+                                    lastOffset = .zero
+                                } else {
+                                    // Zoom to 2x centered on tap location
+                                    scale = 2.5
+                                    lastScale = 2.5
+
+                                    // Calculate offset to center on tap point
+                                    let centerX = geometry.size.width / 2
+                                    let centerY = geometry.size.height / 2
+                                    let tapX = location.x
+                                    let tapY = location.y
+
+                                    offset = CGSize(
+                                        width: (centerX - tapX) * (scale - 1),
+                                        height: (centerY - tapY) * (scale - 1)
+                                    )
+                                    lastOffset = offset
+                                    clampOffset(in: geometry.size)
                                 }
                             }
-                    )
-                    .onTapGesture(count: 2) {
-                        // Double tap to reset zoom
-                        withAnimation {
-                            scale = 1
-                            lastScale = 1
                         }
+                } else if isLoading {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                } else {
+                    VStack(spacing: 20) {
+                        Image(systemName: "exclamationmark.triangle")
+                            .font(.system(size: 48))
+                            .foregroundColor(.white.opacity(0.7))
+                        Text("Failed to load photo")
+                            .foregroundColor(.white.opacity(0.7))
                     }
-            } else if isLoading {
-                ProgressView()
-                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
-            } else {
-                VStack(spacing: 20) {
-                    Image(systemName: "exclamationmark.triangle")
-                        .font(.system(size: 48))
-                        .foregroundColor(.white.opacity(0.7))
-                    Text("Failed to load photo")
-                        .foregroundColor(.white.opacity(0.7))
                 }
             }
         }
         .onAppear {
             loadFullImage()
+        }
+    }
+
+    private func clampOffset(in size: CGSize) {
+        // Calculate maximum allowed offset based on scale
+        let maxOffsetX = max(0, (size.width * (scale - 1)) / 2)
+        let maxOffsetY = max(0, (size.height * (scale - 1)) / 2)
+
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+            offset = CGSize(
+                width: min(max(offset.width, -maxOffsetX), maxOffsetX),
+                height: min(max(offset.height, -maxOffsetY), maxOffsetY)
+            )
+            lastOffset = offset
         }
     }
 
