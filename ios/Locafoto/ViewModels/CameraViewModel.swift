@@ -61,7 +61,15 @@ class CameraViewModel: NSObject, ObservableObject {
             return
         }
 
+        // Don't start if already running
+        if captureSession.isRunning {
+            isCameraReady = true
+            return
+        }
+
         do {
+            // Create fresh photo output for this session
+            photoOutput = AVCapturePhotoOutput()
             cameraService = CameraService()
             try await cameraService?.setupCamera(session: captureSession, output: photoOutput)
             isCameraReady = true
@@ -73,11 +81,29 @@ class CameraViewModel: NSObject, ObservableObject {
         }
     }
 
-    /// Stop the camera session
+    /// Stop the camera session and clean up resources
     func stopCamera() {
-        Task {
-            await cameraService?.stopCamera(session: captureSession)
+        // Stop running first
+        if captureSession.isRunning {
+            captureSession.stopRunning()
         }
+
+        // Remove all inputs and outputs to allow fresh setup next time
+        captureSession.beginConfiguration()
+
+        for input in captureSession.inputs {
+            captureSession.removeInput(input)
+        }
+
+        for output in captureSession.outputs {
+            captureSession.removeOutput(output)
+        }
+
+        captureSession.commitConfiguration()
+
+        // Reset state
+        isCameraReady = false
+        cameraService = nil
     }
 
     /// Flip between front and back camera

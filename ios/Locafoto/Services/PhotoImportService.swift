@@ -5,6 +5,7 @@ import CryptoKit
 import CoreImage
 import CoreImage.CIFilterBuiltins
 import AVFoundation
+import ImageIO
 
 /// Service for importing photos from Camera Roll
 actor PhotoImportService {
@@ -31,6 +32,11 @@ actor PhotoImportService {
         // Load the image data
         let photoData = try await loadPhotoData(from: result)
 
+        // Extract metadata from original photo
+        let captureDate = extractCaptureDate(from: photoData)
+        let dimensions = extractImageDimensions(from: photoData)
+        let location = extractLocation(from: photoData)
+
         // Generate thumbnail based on style setting
         let style = thumbnailStyle
         let thumbnailData = try generateThumbnail(from: photoData, style: style)
@@ -43,6 +49,9 @@ actor PhotoImportService {
         // Encrypt thumbnail with master key for fast gallery loading
         let encryptionService = EncryptionService()
         let encryptedThumbnail = try await encryptionService.encryptPhoto(thumbnailData)
+
+        // Determine format from image data
+        let format = detectImageFormat(from: photoData)
 
         // Create encrypted photo structure
         // Main photo is encrypted with LFS key (tracked separately via LFSFileTrackingService)
@@ -61,10 +70,12 @@ actor PhotoImportService {
             thumbnailAuthTag: encryptedThumbnail.authTag,
             metadata: PhotoMetadata(
                 originalSize: photoData.count,
-                captureDate: Date(),
-                width: nil,
-                height: nil,
-                format: "IMPORTED"
+                captureDate: captureDate,
+                width: dimensions?.width,
+                height: dimensions?.height,
+                format: format,
+                latitude: location?.latitude,
+                longitude: location?.longitude
             )
         )
 
@@ -105,6 +116,15 @@ actor PhotoImportService {
         let encryptionService = EncryptionService()
         let encryptedThumbnail = try await encryptionService.encryptPhoto(thumbnailData)
 
+        // Get video metadata (duration, creation date, location)
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".mov")
+        try videoData.write(to: tempURL)
+        let asset = AVAsset(url: tempURL)
+        let duration = try await asset.load(.duration).seconds
+        let captureDate = await extractVideoCreationDate(from: tempURL)
+        let location = await extractVideoLocation(from: tempURL)
+        try? FileManager.default.removeItem(at: tempURL)
+
         // Create encrypted photo structure
         // Main video is encrypted with LFS key (tracked separately via LFSFileTrackingService)
         // Thumbnail is encrypted with master key - store thumbnail encryption info separately
@@ -122,10 +142,14 @@ actor PhotoImportService {
             thumbnailAuthTag: encryptedThumbnail.authTag,
             metadata: PhotoMetadata(
                 originalSize: videoData.count,
-                captureDate: Date(),
+                captureDate: captureDate,
                 width: nil,
                 height: nil,
-                format: "VIDEO"
+                format: "mp4",
+                mediaType: .video,
+                duration: duration,
+                latitude: location?.latitude,
+                longitude: location?.longitude
             )
         )
 
@@ -255,6 +279,161 @@ actor PhotoImportService {
         }
 
         return UIImage(cgImage: cgImage)
+    }
+
+    /// Extract capture date from image EXIF metadata
+    private func extractCaptureDate(from data: Data) -> Date {
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil),
+              let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [String: Any] else {
+            return Date()
+        }
+
+        // Try EXIF date first
+        if let exif = properties[kCGImagePropertyExifDictionary as String] as? [String: Any],
+           let dateString = exif[kCGImagePropertyExifDateTimeOriginal as String] as? String {
+            if let date = parseExifDate(dateString) {
+                return date
+            }
+        }
+
+        // Try TIFF date
+        if let tiff = properties[kCGImagePropertyTIFFDictionary as String] as? [String: Any],
+           let dateString = tiff[kCGImagePropertyTIFFDateTime as String] as? String {
+            if let date = parseExifDate(dateString) {
+                return date
+            }
+        }
+
+        // Fallback to current date
+        return Date()
+    }
+
+    /// Parse EXIF date string format "yyyy:MM:dd HH:mm:ss"
+    private func parseExifDate(_ dateString: String) -> Date? {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy:MM:dd HH:mm:ss"
+        formatter.timeZone = TimeZone.current
+        return formatter.date(from: dateString)
+    }
+
+    /// Extract image dimensions from data
+    private func extractImageDimensions(from data: Data) -> (width: Int, height: Int)? {
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil),
+              let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [String: Any],
+              let width = properties[kCGImagePropertyPixelWidth as String] as? Int,
+              let height = properties[kCGImagePropertyPixelHeight as String] as? Int else {
+            return nil
+        }
+        return (width, height)
+    }
+
+    /// Extract GPS location from image EXIF metadata
+    private func extractLocation(from data: Data) -> (latitude: Double, longitude: Double)? {
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil),
+              let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [String: Any],
+              let gps = properties[kCGImagePropertyGPSDictionary as String] as? [String: Any] else {
+            return nil
+        }
+
+        guard let latitude = gps[kCGImagePropertyGPSLatitude as String] as? Double,
+              let longitude = gps[kCGImagePropertyGPSLongitude as String] as? Double,
+              let latRef = gps[kCGImagePropertyGPSLatitudeRef as String] as? String,
+              let lonRef = gps[kCGImagePropertyGPSLongitudeRef as String] as? String else {
+            return nil
+        }
+
+        // Apply reference directions
+        let finalLat = latRef == "S" ? -latitude : latitude
+        let finalLon = lonRef == "W" ? -longitude : longitude
+
+        return (finalLat, finalLon)
+    }
+
+    /// Extract video location
+    private func extractVideoLocation(from url: URL) async -> (latitude: Double, longitude: Double)? {
+        let asset = AVAsset(url: url)
+
+        // Try to get location from metadata
+        guard let metadata = try? await asset.load(.metadata) else {
+            return nil
+        }
+
+        for item in metadata {
+            if item.commonKey == .commonKeyLocation,
+               let value = try? await item.load(.value) as? String {
+                // Parse ISO 6709 location string like "+37.7749-122.4194/"
+                return parseISO6709Location(value)
+            }
+        }
+
+        return nil
+    }
+
+    /// Parse ISO 6709 location string
+    private func parseISO6709Location(_ string: String) -> (latitude: Double, longitude: Double)? {
+        // Format: +DD.DDDD+DDD.DDDD/ or +DD.DDDD-DDD.DDDD/
+        let pattern = "([+-]?\\d+\\.?\\d*)([+-]\\d+\\.?\\d*)"
+        guard let regex = try? NSRegularExpression(pattern: pattern),
+              let match = regex.firstMatch(in: string, range: NSRange(string.startIndex..., in: string)) else {
+            return nil
+        }
+
+        guard let latRange = Range(match.range(at: 1), in: string),
+              let lonRange = Range(match.range(at: 2), in: string),
+              let latitude = Double(string[latRange]),
+              let longitude = Double(string[lonRange]) else {
+            return nil
+        }
+
+        return (latitude, longitude)
+    }
+
+    /// Extract video creation date
+    private func extractVideoCreationDate(from url: URL) async -> Date {
+        let asset = AVAsset(url: url)
+        if let creationDate = try? await asset.load(.creationDate),
+           let date = creationDate.dateValue {
+            return date
+        }
+        return Date()
+    }
+
+    /// Detect image format from data
+    private func detectImageFormat(from data: Data) -> String {
+        guard data.count >= 12 else { return "unknown" }
+
+        let bytes = [UInt8](data.prefix(12))
+
+        // JPEG: FFD8FF
+        if bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF {
+            return "jpeg"
+        }
+
+        // PNG: 89504E47
+        if bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47 {
+            return "png"
+        }
+
+        // HEIC: Check for ftyp box with heic/heix
+        if bytes[4] == 0x66 && bytes[5] == 0x74 && bytes[6] == 0x79 && bytes[7] == 0x70 {
+            let brand = String(bytes: bytes[8...11], encoding: .ascii) ?? ""
+            if brand.lowercased().contains("heic") || brand.lowercased().contains("heix") {
+                return "heic"
+            }
+        }
+
+        // GIF: 474946
+        if bytes[0] == 0x47 && bytes[1] == 0x49 && bytes[2] == 0x46 {
+            return "gif"
+        }
+
+        // WebP: RIFF....WEBP
+        if bytes[0] == 0x52 && bytes[1] == 0x49 && bytes[2] == 0x46 && bytes[3] == 0x46 &&
+           bytes[8] == 0x57 && bytes[9] == 0x45 && bytes[10] == 0x42 && bytes[11] == 0x50 {
+            return "webp"
+        }
+
+        return "unknown"
     }
 }
 

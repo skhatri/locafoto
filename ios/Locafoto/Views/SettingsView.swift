@@ -45,6 +45,7 @@ struct SettingsView: View {
     @AppStorage("allowDeleteNonEmptyAlbums") private var allowDeleteNonEmptyAlbums = false
     @AppStorage("albumSortOption") private var albumSortOptionRaw = AlbumSortOption.modifiedDateDesc.rawValue
     @AppStorage("photoSortOption") private var photoSortOptionRaw = PhotoSortOption.captureDateDesc.rawValue
+    @AppStorage("loopVideos") private var loopVideos = false
     @State private var photoAccessStatus: String = "Unknown"
     @State private var receivedFiles: [ReceivedFileInfo] = []
     @State private var orphanedPhotos: [OrphanedPhotoInfo] = []
@@ -60,9 +61,10 @@ struct SettingsView: View {
     var body: some View {
         NavigationView {
             Form {
-                Section(header: Text("Photo Library Access")) {
+                // MARK: - Media
+                Section(header: Text("Media")) {
                     HStack {
-                        Text("Current Access")
+                        Text("Photo Library Access")
                         Spacer()
                         Text(photoAccessStatus)
                             .foregroundColor(.secondary)
@@ -74,20 +76,17 @@ struct SettingsView: View {
                         }
                     }
 
-                    Text("Choose 'All Photos' for full access or 'Selected Photos' to limit which photos the app can see")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                    Toggle("Allow Deleting Non-Empty Albums", isOn: $allowDeleteNonEmptyAlbums)
+
+                    Toggle("Auto-delete from Camera Roll", isOn: $autoDeleteFromCameraRoll)
+
+                    Toggle("Loop Videos", isOn: $loopVideos)
                 }
 
+                // MARK: - Privacy
                 Section(header: Text("Privacy")) {
                     Toggle("Preserve Photo Metadata", isOn: $preserveMetadata)
 
-                    Text("Keep EXIF data including location, camera settings, and timestamps")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-
-                Section(header: Text("App Lock")) {
                     if isFaceIDAvailable {
                         Toggle("Use Face ID to Unlock", isOn: Binding(
                             get: { appState.isFaceIDEnabled },
@@ -101,10 +100,6 @@ struct SettingsView: View {
                                 }
                             }
                         ))
-
-                        Text("Unlock the app with Face ID instead of entering your PIN")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
                     } else {
                         HStack {
                             Image(systemName: "faceid")
@@ -112,21 +107,16 @@ struct SettingsView: View {
                             Text("Face ID not available")
                                 .foregroundColor(.secondary)
                         }
-
-                        Text("Face ID is not set up on this device. Please enable Face ID in Settings to use this feature.")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
                     }
 
                     Toggle("Lock When Backgrounded", isOn: $appState.lockOnBackground)
-
-                    Text("Automatically lock the app when it goes to the background. Requires Face ID or PIN to unlock.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
                 }
 
-                Section(header: Text("Thumbnail Style")) {
-                    Picker("Style", selection: $thumbnailStyleRaw) {
+                // MARK: - Preview
+                Section(header: Text("Preview")) {
+                    Toggle("Generate Thumbnails", isOn: $generateThumbnails)
+
+                    Picker("Thumbnail Style", selection: $thumbnailStyleRaw) {
                         ForEach(ThumbnailStyle.allCases, id: \.rawValue) { style in
                             Text(style.displayName).tag(style.rawValue)
                         }
@@ -138,32 +128,9 @@ struct SettingsView: View {
                         .foregroundColor(.secondary)
                 }
 
-                Section(header: Text("Import")) {
-                    Toggle("Auto-delete from Camera Roll", isOn: $autoDeleteFromCameraRoll)
-
-                    Text("Automatically delete photos from Camera Roll after importing to Locafoto")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-
-                Section(header: Text("Performance")) {
-                    Toggle("Generate Thumbnails", isOn: $generateThumbnails)
-
-                    Text("Create smaller thumbnails for faster gallery browsing")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-
-                Section(header: Text("Albums")) {
-                    Toggle("Allow Deleting Non-Empty Albums", isOn: $allowDeleteNonEmptyAlbums)
-
-                    Text("When enabled, you can delete albums that contain photos. Photos will also be deleted.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-
-                Section(header: Text("Album Sorting")) {
-                    Picker("Sort By", selection: $albumSortOptionRaw) {
+                // MARK: - Sort
+                Section(header: Text("Sort")) {
+                    Picker("Album Sort", selection: $albumSortOptionRaw) {
                         ForEach(AlbumSortOption.allCases, id: \.rawValue) { option in
                             HStack {
                                 Image(systemName: option.iconName)
@@ -174,13 +141,7 @@ struct SettingsView: View {
                     }
                     .pickerStyle(.menu)
 
-                    Text("Choose how albums are sorted in the Albums view")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-
-                Section(header: Text("Photo Sorting")) {
-                    Picker("Sort By", selection: $photoSortOptionRaw) {
+                    Picker("Photo Sort", selection: $photoSortOptionRaw) {
                         ForEach(PhotoSortOption.allCases, id: \.rawValue) { option in
                             HStack {
                                 Image(systemName: option.iconName)
@@ -190,10 +151,6 @@ struct SettingsView: View {
                         }
                     }
                     .pickerStyle(.menu)
-
-                    Text("Choose how photos are sorted in albums and gallery")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
                 }
 
                 Section(header: Text("About")) {

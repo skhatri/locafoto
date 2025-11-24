@@ -1,6 +1,7 @@
 import SwiftUI
 import Foundation
 import CryptoKit
+import AVKit
 
 struct GalleryView: View {
     @StateObject private var viewModel = GalleryViewModel()
@@ -512,35 +513,61 @@ struct PhotoThumbnailView: View {
     @State private var loadError = false
 
     var body: some View {
-        Group {
-            if let image = thumbnailImage {
-                Image(uiImage: image)
-                    .resizable()
-            } else if loadError {
-                Rectangle()
-                    .fill(Color(.secondarySystemBackground))
-                    .overlay(
-                        VStack(spacing: 4) {
-                            Image(systemName: "exclamationmark.triangle")
-                                .font(.caption)
-                            Text("Failed")
-                                .font(.caption2)
-                        }
-                        .foregroundColor(.locafotoError)
-                    )
-            } else if isLoading {
-                Rectangle()
-                    .fill(Color(.secondarySystemBackground))
-                    .overlay(
-                        ProgressView()
-                            .controlSize(.small)
-                            .tint(.locafotoPrimary)
-                    )
+        ZStack(alignment: .bottomTrailing) {
+            Group {
+                if let image = thumbnailImage {
+                    Image(uiImage: image)
+                        .resizable()
+                } else if loadError {
+                    Rectangle()
+                        .fill(Color(.secondarySystemBackground))
+                        .overlay(
+                            VStack(spacing: 4) {
+                                Image(systemName: "exclamationmark.triangle")
+                                    .font(.caption)
+                                Text("Failed")
+                                    .font(.caption2)
+                            }
+                            .foregroundColor(.locafotoError)
+                        )
+                } else if isLoading {
+                    Rectangle()
+                        .fill(Color(.secondarySystemBackground))
+                        .overlay(
+                            ProgressView()
+                                .controlSize(.small)
+                                .tint(.locafotoPrimary)
+                        )
+                }
+            }
+
+            // Video indicator
+            if photo.effectiveMediaType == .video {
+                HStack(spacing: 2) {
+                    Image(systemName: "play.fill")
+                        .font(.system(size: 8))
+                    if let duration = photo.duration {
+                        Text(formatDuration(duration))
+                            .font(.system(size: 9, weight: .medium))
+                    }
+                }
+                .foregroundColor(.white)
+                .padding(.horizontal, 4)
+                .padding(.vertical, 2)
+                .background(Color.black.opacity(0.6))
+                .cornerRadius(4)
+                .padding(4)
             }
         }
         .onAppear {
             loadThumbnail()
         }
+    }
+
+    private func formatDuration(_ seconds: Double) -> String {
+        let mins = Int(seconds) / 60
+        let secs = Int(seconds) % 60
+        return String(format: "%d:%02d", mins, secs)
     }
 
     private func loadThumbnail() {
@@ -722,26 +749,69 @@ struct PhotoGalleryDetailView: View {
 struct PhotoDetailView: View {
     let photo: Photo
     @EnvironmentObject var appState: AppState
+    @AppStorage("loopVideos") private var loopVideos = false
     @State private var fullImage: UIImage?
     @State private var isLoading = true
     @State private var scale: CGFloat = 1.0
     @State private var lastScale: CGFloat = 1.0
     @State private var offset: CGSize = .zero
     @State private var lastOffset: CGSize = .zero
+    @State private var player: AVPlayer?
+    @State private var videoURL: URL?
+    @State private var showMetadata = false
+    @State private var metadataDragOffset: CGFloat = 0
 
     var body: some View {
         GeometryReader { geometry in
             ZStack {
                 Color.black.ignoresSafeArea()
 
-                if let image = fullImage {
-                    Image(uiImage: image)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .scaleEffect(scale)
-                        .offset(offset)
-                        .gesture(
-                            SimultaneousGesture(
+                if photo.effectiveMediaType == .video {
+                    // Video player
+                    if let player = player {
+                        VideoPlayer(player: player)
+                            .onAppear {
+                                player.play()
+                                // Set up looping if enabled
+                                if loopVideos {
+                                    NotificationCenter.default.addObserver(
+                                        forName: .AVPlayerItemDidPlayToEndTime,
+                                        object: player.currentItem,
+                                        queue: .main
+                                    ) { _ in
+                                        player.seek(to: .zero)
+                                        player.play()
+                                    }
+                                }
+                            }
+                            .onDisappear {
+                                player.pause()
+                                NotificationCenter.default.removeObserver(
+                                    self,
+                                    name: .AVPlayerItemDidPlayToEndTime,
+                                    object: player.currentItem
+                                )
+                            }
+                    } else if isLoading {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                    } else {
+                        VStack(spacing: 20) {
+                            Image(systemName: "exclamationmark.triangle")
+                                .font(.system(size: 48))
+                                .foregroundColor(.white.opacity(0.7))
+                            Text("Failed to load video")
+                                .foregroundColor(.white.opacity(0.7))
+                        }
+                    }
+                } else {
+                    if let image = fullImage {
+                        Image(uiImage: image)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .scaleEffect(scale)
+                            .offset(offset)
+                            .gesture(
                                 MagnificationGesture()
                                     .onChanged { value in
                                         let newScale = lastScale * value
@@ -765,8 +835,10 @@ struct PhotoDetailView: View {
                                         }
                                         // Clamp offset after zooming
                                         clampOffset(in: geometry.size)
-                                    },
-                                DragGesture()
+                                    }
+                            )
+                            .simultaneousGesture(
+                                DragGesture(minimumDistance: scale > 1 ? 0 : 10000)
                                     .onChanged { value in
                                         if scale > 1 {
                                             offset = CGSize(
@@ -776,56 +848,141 @@ struct PhotoDetailView: View {
                                         }
                                     }
                                     .onEnded { _ in
-                                        lastOffset = offset
-                                        clampOffset(in: geometry.size)
+                                        if scale > 1 {
+                                            lastOffset = offset
+                                            clampOffset(in: geometry.size)
+                                        }
                                     }
                             )
-                        )
-                        .onTapGesture(count: 2) { location in
-                            // Double tap to toggle zoom
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                if scale > 1 {
-                                    // Reset to normal
-                                    scale = 1
-                                    lastScale = 1
-                                    offset = .zero
-                                    lastOffset = .zero
-                                } else {
-                                    // Zoom to 2x centered on tap location
-                                    scale = 2.5
-                                    lastScale = 2.5
+                            .onTapGesture(count: 2) {
+                                // Double tap to toggle zoom (centered)
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                    if scale > 1 {
+                                        // Reset to normal
+                                        scale = 1
+                                        lastScale = 1
+                                        offset = .zero
+                                        lastOffset = .zero
+                                    } else {
+                                        // Zoom to 2.5x centered
+                                        scale = 2.5
+                                        lastScale = 2.5
+                                        offset = .zero
+                                        lastOffset = .zero
+                                    }
+                                }
+                            }
+                    } else if isLoading {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                    } else {
+                        VStack(spacing: 20) {
+                            Image(systemName: "exclamationmark.triangle")
+                                .font(.system(size: 48))
+                                .foregroundColor(.white.opacity(0.7))
+                            Text("Failed to load photo")
+                                .foregroundColor(.white.opacity(0.7))
+                        }
+                    }
+                }
 
-                                    // Calculate offset to center on tap point
-                                    let centerX = geometry.size.width / 2
-                                    let centerY = geometry.size.height / 2
-                                    let tapX = location.x
-                                    let tapY = location.y
-
-                                    offset = CGSize(
-                                        width: (centerX - tapX) * (scale - 1),
-                                        height: (centerY - tapY) * (scale - 1)
-                                    )
-                                    lastOffset = offset
-                                    clampOffset(in: geometry.size)
+                // Metadata panel overlay
+                if showMetadata {
+                    PhotoMetadataPanel(photo: photo, isShowing: $showMetadata)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+            }
+            .gesture(
+                DragGesture(minimumDistance: 30)
+                    .onEnded { value in
+                        // Only trigger swipe-up when not zoomed
+                        if scale <= 1 {
+                            if value.translation.height < -50 {
+                                // Swipe up - show metadata
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                    showMetadata = true
+                                }
+                            } else if value.translation.height > 50 && showMetadata {
+                                // Swipe down - hide metadata
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                    showMetadata = false
                                 }
                             }
                         }
-                } else if isLoading {
-                    ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                } else {
-                    VStack(spacing: 20) {
-                        Image(systemName: "exclamationmark.triangle")
-                            .font(.system(size: 48))
-                            .foregroundColor(.white.opacity(0.7))
-                        Text("Failed to load photo")
-                            .foregroundColor(.white.opacity(0.7))
                     }
-                }
-            }
+            )
         }
         .onAppear {
-            loadFullImage()
+            if photo.effectiveMediaType == .video {
+                loadVideo()
+            } else {
+                loadFullImage()
+            }
+        }
+        .onDisappear {
+            // Clean up video temp file
+            if let url = videoURL {
+                try? FileManager.default.removeItem(at: url)
+            }
+        }
+    }
+
+    private func loadVideo() {
+        Task {
+            do {
+                let storageService = StorageService()
+                let encryptionService = EncryptionService()
+                let trackingService = LFSFileTrackingService()
+                let keyManagementService = KeyManagementService()
+
+                let videoData = try await storageService.loadPhoto(for: photo.id)
+
+                // Check if this video is encrypted with LFS key
+                let trackingInfo = try? await trackingService.getTrackingInfo(forPhotoId: photo.id)
+
+                let decryptedData: Data
+
+                if let tracking = trackingInfo, let pin = appState.currentPin {
+                    // Video is encrypted with LFS key
+                    print("🔓 Decrypting video with LFS key: \(tracking.keyName)")
+
+                    let lfsKey = try await keyManagementService.getKey(byName: tracking.keyName, pin: pin)
+
+                    let iv = tracking.iv ?? photo.ivData
+                    let authTag = tracking.authTag ?? photo.authTagData
+
+                    let nonce = try AES.GCM.Nonce(data: iv)
+                    let sealedBox = try AES.GCM.SealedBox(nonce: nonce, ciphertext: videoData, tag: authTag)
+                    decryptedData = try AES.GCM.open(sealedBox, using: lfsKey)
+                } else {
+                    // Video is encrypted with master key
+                    print("🔓 Decrypting video with master key")
+                    decryptedData = try await encryptionService.decryptPhotoData(
+                        videoData,
+                        encryptedKey: photo.encryptedKeyData,
+                        iv: photo.ivData,
+                        authTag: photo.authTagData
+                    )
+                }
+
+                // Write to temp file for AVPlayer
+                let tempURL = FileManager.default.temporaryDirectory
+                    .appendingPathComponent(UUID().uuidString)
+                    .appendingPathExtension(photo.format.isEmpty ? "mp4" : photo.format)
+
+                try decryptedData.write(to: tempURL)
+
+                await MainActor.run {
+                    videoURL = tempURL
+                    player = AVPlayer(url: tempURL)
+                    isLoading = false
+                }
+            } catch {
+                print("Failed to load video: \(error)")
+                await MainActor.run {
+                    isLoading = false
+                }
+            }
         }
     }
 
@@ -902,6 +1059,249 @@ struct PhotoDetailView: View {
                 await MainActor.run {
                     isLoading = false
                 }
+            }
+        }
+    }
+}
+
+// MARK: - Photo Metadata Panel
+
+struct PhotoMetadataPanel: View {
+    let photo: Photo
+    @Binding var isShowing: Bool
+
+    private let dateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter
+    }()
+
+    private let fileSizeFormatter: ByteCountFormatter = {
+        let formatter = ByteCountFormatter()
+        formatter.countStyle = .file
+        return formatter
+    }()
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Spacer()
+
+            VStack(spacing: 0) {
+                // Drag indicator
+                Capsule()
+                    .fill(Color.white.opacity(0.5))
+                    .frame(width: 36, height: 5)
+                    .padding(.top, 8)
+                    .padding(.bottom, 12)
+
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        // Original capture info
+                        MetadataSectionView(title: "Original") {
+                            MetadataRow(icon: "calendar", label: "Captured", value: dateFormatter.string(from: photo.captureDate))
+
+                            if let width = photo.width, let height = photo.height {
+                                MetadataRow(icon: "aspectratio", label: "Dimensions", value: "\(width) × \(height)")
+                            }
+
+                            MetadataRow(icon: "doc", label: "Format", value: photo.format.uppercased())
+
+                            MetadataRow(icon: "internaldrive", label: "Size", value: fileSizeFormatter.string(fromByteCount: photo.originalSize))
+
+                            if photo.effectiveMediaType == .video, let duration = photo.duration {
+                                MetadataRow(icon: "play.rectangle", label: "Duration", value: formatDuration(duration))
+                            }
+                        }
+
+                        // Location info (if available)
+                        if let latitude = photo.latitude, let longitude = photo.longitude {
+                            MetadataSectionView(title: "Location") {
+                                MetadataRow(icon: "location.fill", label: "Coordinates", value: formatCoordinates(latitude: latitude, longitude: longitude))
+
+                                Button(action: {
+                                    openInMaps(latitude: latitude, longitude: longitude)
+                                }) {
+                                    HStack(spacing: 12) {
+                                        Image(systemName: "map.fill")
+                                            .font(.system(size: 14))
+                                            .foregroundColor(.locafotoPrimary)
+                                            .frame(width: 20)
+
+                                        Text("Open in Maps")
+                                            .font(.subheadline)
+                                            .foregroundColor(.locafotoPrimary)
+
+                                        Spacer()
+
+                                        Image(systemName: "arrow.up.right")
+                                            .font(.system(size: 12))
+                                            .foregroundColor(.locafotoPrimary)
+                                    }
+                                }
+                            }
+                        }
+
+                        // Import info
+                        MetadataSectionView(title: "Locafoto") {
+                            MetadataRow(icon: "square.and.arrow.down", label: "Imported", value: dateFormatter.string(from: photo.importDate))
+
+                            MetadataRow(icon: "clock", label: "Modified", value: dateFormatter.string(from: photo.modifiedDate))
+
+                            MetadataRow(icon: "lock.shield", label: "Encrypted Size", value: fileSizeFormatter.string(fromByteCount: photo.encryptedSize))
+
+                            MetadataRow(icon: photo.effectiveMediaType == .video ? "video.fill" : "photo.fill",
+                                       label: "Type",
+                                       value: photo.effectiveMediaType == .video ? "Video" : "Photo")
+                        }
+
+                        // Tags if any
+                        if !photo.tags.isEmpty {
+                            MetadataSectionView(title: "Tags") {
+                                WrappingHStack(spacing: 8) {
+                                    ForEach(photo.tags, id: \.self) { tag in
+                                        Text(tag)
+                                            .font(.caption)
+                                            .padding(.horizontal, 10)
+                                            .padding(.vertical, 4)
+                                            .background(Color.locafotoPrimary.opacity(0.2))
+                                            .foregroundColor(.locafotoPrimary)
+                                            .cornerRadius(12)
+                                    }
+                                }
+                            }
+                        }
+
+                        // Status indicators
+                        HStack(spacing: 16) {
+                            if photo.isFavorite {
+                                Label("Favorite", systemImage: "heart.fill")
+                                    .font(.caption)
+                                    .foregroundColor(.pink)
+                            }
+
+                            if photo.isHidden {
+                                Label("Hidden", systemImage: "eye.slash.fill")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        .padding(.top, 8)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 40)
+                }
+            }
+            .frame(maxHeight: UIScreen.main.bounds.height * 0.6)
+            .background(
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(.ultraThinMaterial)
+                    .shadow(color: .black.opacity(0.3), radius: 20, y: -5)
+            )
+            .gesture(
+                DragGesture()
+                    .onEnded { value in
+                        if value.translation.height > 100 {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                isShowing = false
+                            }
+                        }
+                    }
+            )
+        }
+        .ignoresSafeArea(edges: .bottom)
+    }
+
+    private func formatDuration(_ seconds: Double) -> String {
+        let hours = Int(seconds) / 3600
+        let mins = (Int(seconds) % 3600) / 60
+        let secs = Int(seconds) % 60
+
+        if hours > 0 {
+            return String(format: "%d:%02d:%02d", hours, mins, secs)
+        } else {
+            return String(format: "%d:%02d", mins, secs)
+        }
+    }
+
+    private func formatCoordinates(latitude: Double, longitude: Double) -> String {
+        let latDir = latitude >= 0 ? "N" : "S"
+        let lonDir = longitude >= 0 ? "E" : "W"
+        return String(format: "%.4f° %@, %.4f° %@", abs(latitude), latDir, abs(longitude), lonDir)
+    }
+
+    private func openInMaps(latitude: Double, longitude: Double) {
+        let urlString = "http://maps.apple.com/?ll=\(latitude),\(longitude)&q=Photo%20Location"
+        if let url = URL(string: urlString) {
+            UIApplication.shared.open(url)
+        }
+    }
+}
+
+// MARK: - Metadata Section View
+
+struct MetadataSectionView<Content: View>: View {
+    let title: String
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(title)
+                .font(.subheadline)
+                .fontWeight(.bold)
+                .foregroundColor(.locafotoPrimary)
+
+            VStack(alignment: .leading, spacing: 8) {
+                content
+            }
+        }
+    }
+}
+
+// MARK: - Metadata Row
+
+struct MetadataRow: View {
+    let icon: String
+    let label: String
+    let value: String
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 14))
+                .foregroundColor(.locafotoPrimary)
+                .frame(width: 20)
+
+            Text(label)
+                .font(.subheadline)
+                .foregroundColor(.primary.opacity(0.8))
+
+            Spacer()
+
+            Text(value)
+                .font(.subheadline)
+                .fontWeight(.medium)
+                .foregroundColor(.primary)
+        }
+    }
+}
+
+// MARK: - Wrapping HStack for Tags (iOS 15 compatible)
+
+struct WrappingHStack<Content: View>: View {
+    let spacing: CGFloat
+    @ViewBuilder let content: Content
+
+    init(spacing: CGFloat = 8, @ViewBuilder content: () -> Content) {
+        self.spacing = spacing
+        self.content = content()
+    }
+
+    var body: some View {
+        // Simple horizontal scroll for iOS 15 compatibility
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: spacing) {
+                content
             }
         }
     }

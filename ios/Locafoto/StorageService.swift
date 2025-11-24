@@ -24,7 +24,6 @@ actor StorageService {
         }
     }
 
-    /// Get the photos subdirectory
     private var photosSubdirectory: URL {
         get throws {
             let dir = try photosDirectory.appendingPathComponent("Photos")
@@ -85,6 +84,10 @@ actor StorageService {
             width: encryptedPhoto.metadata.width.map { Int32($0) },
             height: encryptedPhoto.metadata.height.map { Int32($0) },
             format: encryptedPhoto.metadata.format,
+            mediaType: encryptedPhoto.metadata.mediaType,
+            duration: encryptedPhoto.metadata.duration,
+            latitude: encryptedPhoto.metadata.latitude,
+            longitude: encryptedPhoto.metadata.longitude,
             filePath: photoURL.path,
             thumbnailPath: thumbURL.path,
             albumId: albumId,
