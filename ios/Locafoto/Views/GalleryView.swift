@@ -2,6 +2,7 @@ import SwiftUI
 import Foundation
 import CryptoKit
 import AVKit
+import MapKit
 
 struct GalleryView: View {
     @StateObject private var viewModel = GalleryViewModel()
@@ -1117,6 +1118,17 @@ struct PhotoMetadataPanel: View {
                         // Location info (if available)
                         if let latitude = photo.latitude, let longitude = photo.longitude {
                             MetadataSectionView(title: "Location") {
+                                // Inline map preview
+                                Map(coordinateRegion: .constant(MKCoordinateRegion(
+                                    center: CLLocationCoordinate2D(latitude: latitude, longitude: longitude),
+                                    span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+                                )), annotationItems: [PhotoLocation(latitude: latitude, longitude: longitude)]) { location in
+                                    MapMarker(coordinate: location.coordinate, tint: .locafotoPrimary)
+                                }
+                                .frame(height: 150)
+                                .cornerRadius(12)
+                                .allowsHitTesting(false)
+
                                 MetadataRow(icon: "location.fill", label: "Coordinates", value: formatCoordinates(latitude: latitude, longitude: longitude))
 
                                 Button(action: {
@@ -1283,6 +1295,18 @@ struct MetadataRow: View {
                 .fontWeight(.medium)
                 .foregroundColor(.primary)
         }
+    }
+}
+
+// MARK: - Photo Location for Map
+
+struct PhotoLocation: Identifiable {
+    let id = UUID()
+    let latitude: Double
+    let longitude: Double
+
+    var coordinate: CLLocationCoordinate2D {
+        CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
     }
 }
 
