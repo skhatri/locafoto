@@ -22,16 +22,19 @@
 
     <!-- Permissions -->
     <key>NSCameraUsageDescription</key>
-    <string>Locafoto needs camera access to capture photos privately without saving to Camera Roll.</string>
+    <string>Locafoto needs camera access to capture photos and videos privately without saving to Camera Roll.</string>
+
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Locafoto needs microphone access to record audio with your videos.</string>
 
     <key>NSPhotoLibraryUsageDescription</key>
-    <string>Locafoto needs access to import photos from your library for secure encryption.</string>
+    <string>Locafoto needs access to import photos and videos from your library for secure encryption.</string>
 
     <key>NSPhotoLibraryAddUsageDescription</key>
-    <string>Locafoto can optionally export photos back to your library.</string>
+    <string>Locafoto can optionally export photos and videos back to your library.</string>
 
     <key>NSFaceIDUsageDescription</key>
-    <string>Locafoto uses Face ID to securely unlock the app and protect your encrypted photos.</string>
+    <string>Locafoto uses Face ID to securely unlock the app and protect your encrypted photos and videos.</string>
 
     <!-- Custom UTI for .locaphoto, .lfs, and .lfkey files -->
     <key>UTExportedTypeDeclarations</key>

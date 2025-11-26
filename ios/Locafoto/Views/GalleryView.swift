@@ -785,14 +785,6 @@ struct PhotoDetailView: View {
                                     }
                                 }
                             }
-                            .onDisappear {
-                                player.pause()
-                                NotificationCenter.default.removeObserver(
-                                    self,
-                                    name: .AVPlayerItemDidPlayToEndTime,
-                                    object: player.currentItem
-                                )
-                            }
                     } else if isLoading {
                         ProgressView()
                             .progressViewStyle(CircularProgressViewStyle(tint: .white))
@@ -921,6 +913,17 @@ struct PhotoDetailView: View {
             }
         }
         .onDisappear {
+            // Stop video playback
+            player?.pause()
+            player = nil
+
+            // Remove notification observer
+            NotificationCenter.default.removeObserver(
+                self,
+                name: .AVPlayerItemDidPlayToEndTime,
+                object: nil
+            )
+
             // Clean up video temp file
             if let url = videoURL {
                 try? FileManager.default.removeItem(at: url)

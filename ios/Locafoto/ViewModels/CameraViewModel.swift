@@ -4,6 +4,12 @@ import CryptoKit
 import CoreImage
 import CoreImage.CIFilterBuiltins
 
+/// Camera capture mode
+enum CaptureMode: String, CaseIterable {
+    case photo = "Photo"
+    case video = "Video"
+}
+
 @MainActor
 class CameraViewModel: NSObject, ObservableObject {
     @Published var captureSession = AVCaptureSession()
@@ -20,6 +26,15 @@ class CameraViewModel: NSObject, ObservableObject {
     @Published var isUsingFrontCamera = false
     @Published var selectedFilter: CameraFilterPreset = .none
 
+    // Video recording state
+    @Published var captureMode: CaptureMode = .photo
+    @Published var isRecording = false
+    @Published var recordingDuration: TimeInterval = 0
+    @Published var pendingVideoURL: URL?  // Holds video URL when auto-stopped
+    @Published var selectedVideoFilter: VideoFilterPreset = .none
+    private var recordingTimer: Timer?
+    private let maxRecordingDuration: TimeInterval = 30
+
     private var photoOutput = AVCapturePhotoOutput()
     private var cameraService: CameraService?
     private var storageService = StorageService()
@@ -28,20 +43,23 @@ class CameraViewModel: NSObject, ObservableObject {
     private var albumService = AlbumService.shared
     private var filterService = FilterService()
 
-    /// Check camera permissions
-    func checkPermissions() async {
-        let status = AVCaptureDevice.authorizationStatus(for: .video)
+    // Preview rendering
+    var previewView: MetalPreviewView?
 
-        switch status {
+    /// Check camera and microphone permissions
+    func checkPermissions() async {
+        let videoStatus = AVCaptureDevice.authorizationStatus(for: .video)
+
+        switch videoStatus {
         case .authorized:
             needsPermission = false
-            return
         case .notDetermined:
             let granted = await AVCaptureDevice.requestAccess(for: .video)
             if !granted {
                 needsPermission = true
-                cameraStatusMessage = "Camera access is required to capture photos"
+                cameraStatusMessage = "Camera access is required to capture photos and videos"
                 isCameraReady = false
+                return
             } else {
                 needsPermission = false
             }
@@ -49,8 +67,15 @@ class CameraViewModel: NSObject, ObservableObject {
             needsPermission = true
             cameraStatusMessage = "Please enable camera access in Settings to use the camera"
             isCameraReady = false
+            return
         @unknown default:
             break
+        }
+
+        // Request microphone access for video recording
+        let audioStatus = AVCaptureDevice.authorizationStatus(for: .audio)
+        if audioStatus == .notDetermined {
+            _ = await AVCaptureDevice.requestAccess(for: .audio)
         }
     }
 
@@ -71,6 +96,14 @@ class CameraViewModel: NSObject, ObservableObject {
             // Create fresh photo output for this session
             photoOutput = AVCapturePhotoOutput()
             cameraService = CameraService()
+
+            // Set up frame callback for preview
+            await cameraService?.setPreviewCallback { [weak self] ciImage in
+                DispatchQueue.main.async {
+                    self?.previewView?.renderFrame(ciImage)
+                }
+            }
+
             try await cameraService?.setupCamera(session: captureSession, output: photoOutput)
             isCameraReady = true
             cameraStatusMessage = ""
@@ -256,6 +289,245 @@ class CameraViewModel: NSObject, ObservableObject {
             isCapturing = false
             ToastManager.shared.showError("Failed to save photo: \(error.localizedDescription)")
         }
+    }
+
+    // MARK: - Video Recording
+
+    /// Start video recording
+    func startRecording() async {
+        guard !isRecording else { return }
+
+        guard selectedKeyName != nil else {
+            errorMessage = "Please select an encryption key first"
+            ToastManager.shared.showError("Please select an encryption key first")
+            return
+        }
+
+        guard selectedAlbumId != nil else {
+            errorMessage = "Please select an album first"
+            ToastManager.shared.showError("Please select an album first")
+            return
+        }
+
+        do {
+            // Set video filter before starting
+            await cameraService?.setVideoFilter(selectedVideoFilter)
+
+            try await cameraService?.startRecording()
+            isRecording = true
+            recordingDuration = 0
+
+            // Start timer to track duration
+            recordingTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+                Task { @MainActor in
+                    guard let self = self else { return }
+                    self.recordingDuration += 0.1
+
+                    // Auto-stop at max duration
+                    if self.recordingDuration >= self.maxRecordingDuration {
+                        await self.autoStopRecording()
+                    }
+                }
+            }
+        } catch {
+            errorMessage = "Failed to start recording: \(error.localizedDescription)"
+            ToastManager.shared.showError("Failed to start recording: \(error.localizedDescription)")
+        }
+    }
+
+    /// Auto-stop recording when max duration reached
+    private func autoStopRecording() async {
+        guard isRecording else { return }
+
+        // Stop timer
+        recordingTimer?.invalidate()
+        recordingTimer = nil
+
+        do {
+            guard let videoURL = try await cameraService?.stopRecording() else {
+                throw CameraError.captureFailed
+            }
+
+            isRecording = false
+            pendingVideoURL = videoURL
+
+            // Show message to user
+            ToastManager.shared.showSuccess("Recording complete - tap to save")
+
+        } catch {
+            isRecording = false
+            errorMessage = "Failed to stop recording: \(error.localizedDescription)"
+            ToastManager.shared.showError("Failed to stop recording: \(error.localizedDescription)")
+        }
+    }
+
+    /// Stop video recording and save
+    func stopRecording(pin: String) async {
+        // Check if we have a pending video from auto-stop
+        if let videoURL = pendingVideoURL {
+            pendingVideoURL = nil
+            isCapturing = true
+            await saveVideo(from: videoURL, pin: pin)
+            isCapturing = false
+            return
+        }
+
+        guard isRecording else { return }
+
+        // Stop timer
+        recordingTimer?.invalidate()
+        recordingTimer = nil
+
+        do {
+            guard let videoURL = try await cameraService?.stopRecording() else {
+                throw CameraError.captureFailed
+            }
+
+            isRecording = false
+            isCapturing = true
+
+            // Save the video
+            await saveVideo(from: videoURL, pin: pin)
+
+            isCapturing = false
+
+        } catch {
+            isRecording = false
+            isCapturing = false
+            errorMessage = "Failed to stop recording: \(error.localizedDescription)"
+            ToastManager.shared.showError("Failed to stop recording: \(error.localizedDescription)")
+        }
+    }
+
+    /// Save recorded video with encryption
+    private func saveVideo(from videoURL: URL, pin: String) async {
+        guard let keyName = selectedKeyName,
+              let albumId = selectedAlbumId else {
+            ToastManager.shared.showError("No key or album selected")
+            return
+        }
+
+        do {
+            // Read video data
+            let videoData = try Data(contentsOf: videoURL)
+
+            // Get video duration
+            let asset = AVAsset(url: videoURL)
+            let duration = try await asset.load(.duration).seconds
+
+            // Get the encryption key
+            let encryptionKey = try await keyManagementService.getKey(byName: keyName, pin: pin)
+
+            // Generate thumbnail from video
+            let thumbnailData = try await generateVideoThumbnail(from: videoURL)
+
+            // Generate thumbnail based on style setting
+            let styleRaw = UserDefaults.standard.integer(forKey: "thumbnailStyle")
+            let style = ThumbnailStyle(rawValue: styleRaw) ?? .blurred
+            let processedThumbnail = try processThumbnail(thumbnailData, style: style)
+
+            // Encrypt video with the selected LFS key
+            let videoId = UUID()
+            let nonce = AES.GCM.Nonce()
+            let sealedBox = try AES.GCM.seal(videoData, using: encryptionKey, nonce: nonce)
+
+            // Encrypt thumbnail with master key for fast gallery loading
+            let encryptionService = EncryptionService()
+            let encryptedThumbnail = try await encryptionService.encryptPhoto(processedThumbnail)
+
+            // Create encrypted photo structure (works for videos too)
+            let encryptedPhoto = EncryptedPhoto(
+                id: videoId,
+                encryptedData: sealedBox.ciphertext,
+                encryptedKey: encryptedThumbnail.encryptedKey,
+                iv: encryptedThumbnail.iv,
+                authTag: encryptedThumbnail.authTag,
+                thumbnailEncryptedKey: encryptedThumbnail.encryptedKey,
+                thumbnailIv: encryptedThumbnail.iv,
+                thumbnailAuthTag: encryptedThumbnail.authTag,
+                metadata: PhotoMetadata(
+                    originalSize: videoData.count,
+                    captureDate: Date(),
+                    width: nil,
+                    height: nil,
+                    format: "mov",
+                    mediaType: .video,
+                    duration: duration
+                )
+            )
+
+            // Save to storage
+            try await storageService.savePhoto(encryptedPhoto, thumbnail: encryptedThumbnail.encryptedData, albumId: albumId)
+
+            // Track the capture with key name and full video crypto info
+            try await trackingService.trackImportWithCrypto(
+                photoId: videoId,
+                keyName: keyName,
+                originalFilename: "video_\(videoId.uuidString)",
+                fileSize: Int64(videoData.count),
+                iv: Data(nonce),
+                authTag: sealedBox.tag
+            )
+
+            // Clean up temp file
+            try? FileManager.default.removeItem(at: videoURL)
+
+            // Show success
+            ToastManager.shared.showSuccess("Video encrypted and saved securely")
+
+        } catch {
+            ToastManager.shared.showError("Failed to save video: \(error.localizedDescription)")
+            // Clean up temp file
+            try? FileManager.default.removeItem(at: videoURL)
+        }
+    }
+
+    /// Generate thumbnail from video
+    private func generateVideoThumbnail(from videoURL: URL) async throws -> Data {
+        let asset = AVAsset(url: videoURL)
+        let imageGenerator = AVAssetImageGenerator(asset: asset)
+        imageGenerator.appliesPreferredTrackTransform = true
+        imageGenerator.maximumSize = CGSize(width: 400, height: 400)
+
+        let time = CMTime(seconds: 0.5, preferredTimescale: 600)
+        let cgImage = try imageGenerator.copyCGImage(at: time, actualTime: nil)
+        let uiImage = UIImage(cgImage: cgImage)
+
+        guard let data = uiImage.jpegData(compressionQuality: 0.8) else {
+            throw CameraError.thumbnailGenerationFailed
+        }
+
+        return data
+    }
+
+    /// Process thumbnail with style (blur, etc.)
+    private func processThumbnail(_ data: Data, style: ThumbnailStyle) throws -> Data {
+        guard let image = UIImage(data: data) else {
+            throw CameraError.invalidImageData
+        }
+
+        let size = style.size
+        let scale = size / max(image.size.width, image.size.height)
+        let newSize = CGSize(
+            width: image.size.width * scale,
+            height: image.size.height * scale
+        )
+
+        UIGraphicsBeginImageContextWithOptions(newSize, true, 1.0)
+        image.draw(in: CGRect(origin: .zero, size: newSize))
+        var thumbnail = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+
+        // Apply blur if needed
+        if style.shouldBlur, let thumbnailImage = thumbnail {
+            thumbnail = applyBlur(to: thumbnailImage)
+        }
+
+        guard let thumbnailData = thumbnail?.jpegData(compressionQuality: 0.8) else {
+            throw CameraError.thumbnailGenerationFailed
+        }
+
+        return thumbnailData
     }
 
     /// Generate thumbnail from photo data with style
